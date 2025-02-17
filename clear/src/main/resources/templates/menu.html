@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu</title>
+    <link rel="stylesheet" th:href="@{/css/menu.css}">
+    <script>
+        function showTab(type) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+            document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+            document.getElementById(type).style.display = 'block';
+            document.querySelector(`.tab-button[data-type="${type}"]`).classList.add('active');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const buttons = document.querySelectorAll('.tab-button');
+            if (buttons.length > 0) {
+                showTab(buttons[0].getAttribute('data-type'));
+            }
+
+            buttons.forEach(button => {
+                button.addEventListener('click', () => showTab(button.getAttribute('data-type')));
+            });
+        });
+    </script>
+</head>
+<body>
+
+<div class="container">
+    <a href="/" class="home-button">Main Page</a>
+
+    <nav>
+        <ul>
+            <li><a href="/menu" class="active">Menu</a></li>
+            <li><a href="/recipe">Recipes</a></li>
+        </ul>
+    </nav>
+
+    <h1>Menu</h1>
+
+    <div class="tabs">
+        <button class="tab-button" th:each="type : ${menuTypes}"
+                th:text="${type.getTypeName()}"
+                th:attr="data-type=${type.getTypeName()}">
+        </button>
+    </div>
+
+    <div th:each="type : ${menuTypes}" th:id="${type.getTypeName()}" class="tab-content" style="display: none;">
+
+        <table class="menu-table">
+            <!-- Фиксируем ширину столбцов -->
+            <colgroup>
+                <col style="width: 20%;">
+                <col style="width: 40%;">
+                <col style="width: 20%;">
+                <col th:if="${isAdmin}" style="width: 7.5%;">
+                <col th:if="${isAdmin}" style="width: 7.5%;">
+            </colgroup>
+            <thead>
+            <tr>
+                <th>Блюдо</th>
+                <th>Описание</th>
+                <th>Стоимость</th>
+                <th th:if="${isAdmin}"></th>
+                <th th:if="${isAdmin}"></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="menu : ${menuItems.get(type.getTypeName())}">
+                <td th:text="${menu.dishName}"></td>
+                <td th:text="${menu.description}"></td>
+                <td th:text="${menu.price}"></td>
+                <td th:if="${isAdmin}">
+                    <button class="admin-btn edit" th:onclick="|window.location.href='/menu/edit/${menu.menuId}'|">Edit</button>
+                </td>
+                <td th:if="${isAdmin}">
+                    <button class="admin-btn delete" th:onclick="|window.location.href='/menu/delete/${menu.menuId}'|">Delete</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-actions" th:if="${isAdmin}">
+        <a href="/menu/add">Add New Dish</a>
+    </div>
+</div>
+
+</body>
+</html>

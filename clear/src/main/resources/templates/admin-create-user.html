@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Create User</title>
+</head>
+<body>
+<h2>Create New User</h2>
+<form th:action="@{/admin/create-user}" method="post">
+    <div>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+    </div>
+    <div>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+    </div>
+    <div>
+        <label for="accessType">Access Level:</label>
+        <select id="accessType" name="accessType">
+            <option th:each="type : ${accessTypes}" th:value="${type.accessName}" th:text="${type.accessName}"></option>
+        </select>
+    </div>
+    <button type="submit">Create User</button>
+</form>
+</body>
+</html>

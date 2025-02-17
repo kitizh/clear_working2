@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Page</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Lucida Console', monospace;
+        }
+
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-image: url('/images/pancakes.jpg');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: cover;
+            z-index: -1;
+        }
+
+        .blurred {
+            filter: blur(5px);
+        }
+
+        .main-buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .main-buttons button {
+            flex: 1;
+            border: none;
+            background-color: #F7E1D7;
+            color: #241918;
+            font-size: 30px;
+            font-variant: small-caps;
+            font-weight: bold;
+            padding: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .main-buttons button:hover {
+            background-color: #E8C8B8;
+        }
+
+        .loyalty-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: #F7E1D7;
+            color: #241918;
+            font-size: 14px;
+            font-variant: small-caps;
+            font-weight: bold;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .loyalty-button:hover {
+            background-color: #E8C8B8;
+        }
+
+        .credits {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            color: #241918;
+        }
+
+        .credits a {
+            color: #241918;
+            text-decoration: none;
+        }
+
+        .credits a:hover {
+            text-decoration: underline;
+        }
+
+        .form-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .form-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            width: 300px;
+        }
+
+        .form-container h2 {
+            margin-bottom: 20px;
+        }
+
+        .form-container input {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .form-container button {
+            background-color: #F7E1D7;
+            color: #241918;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .form-container button:hover {
+            background-color: #E8C8B8;
+        }
+
+        .error-message {
+            color: red;
+            font-size: 12px;
+        }
+
+        .success-message {
+            color: green;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="background"></div>
+
+<button class="loyalty-button" onclick="showLoyaltyForm()">Loyalty Program</button>
+
+<div class="main-buttons">
+    <button onclick="location.href='/menu'">MENU</button>
+    <button onclick="location.href='/reserve'">RESERVE</button>
+    <button onclick="location.href='/reviews'">REVIEWS</button>
+
+</div>
+
+<div class="credits">
+    Credits: <a href="https://github.com/your-profile" target="_blank">Link</a>
+</div>
+
+<div class="form-overlay" id="loyaltyForm" style="display: none;" onclick="closeForm(event)">
+    <div class="form-container" onclick="event.stopPropagation()">
+        <h2 id="formTitle">Enter Your Phone Number</h2>
+        <input type="text" id="phoneNumber" placeholder="Phone Number" th:disabled="${phoneNumberLocked}">
+        <div id="message" class="error-message"></div>
+        <button onclick="checkPhoneNumber()" id="formButton">Check</button>
+    </div>
+</div>
+
+<script>
+    function showLoyaltyForm() {
+        document.querySelector('.background').classList.add('blurred');
+        document.querySelector('.main-buttons').classList.add('blurred');
+        document.getElementById('loyaltyForm').style.display = 'flex';
+    }
+
+    function closeForm(event) {
+        document.querySelector('.background').classList.remove('blurred');
+        document.querySelector('.main-buttons').classList.remove('blurred');
+        document.getElementById('loyaltyForm').style.display = 'none';
+    }
+
+    function checkPhoneNumber() {
+        const phoneNumber = document.getElementById('phoneNumber').value;
+        const message = document.getElementById('message');
+
+        fetch(`/check-phone?number=${encodeURIComponent(phoneNumber)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.exists) {
+                    message.className = 'success-message';
+                    message.textContent = `Your discount level is: ${data.discountLevel}`;
+                } else {
+                    moveToRegistration(phoneNumber);
+                }
+            })
+            .catch(() => {
+                message.className = 'error-message';
+                message.textContent = 'Error checking phone number.';
+            });
+    }
+
+    function moveToRegistration(phoneNumber) {
+        const formContainer = document.querySelector('.form-container');
+        document.getElementById('formTitle').textContent = 'Register Your Details';
+        document.getElementById('phoneNumber').value = phoneNumber;
+        document.getElementById('phoneNumber').disabled = true;
+
+        const nameField = document.createElement('input');
+        nameField.type = 'text';
+        nameField.placeholder = 'Name';
+        nameField.id = 'nameField';
+        formContainer.insertBefore(nameField, document.getElementById('formButton'));
+
+        const emailField = document.createElement('input');
+        emailField.type = 'email';
+        emailField.placeholder = 'Email (optional)';
+        emailField.id = 'emailField';
+        formContainer.insertBefore(emailField, document.getElementById('formButton'));
+
+        document.getElementById('formButton').textContent = 'Submit';
+        document.getElementById('formButton').onclick = submitRegistration;
+    }
+
+
+    function submitRegistration() {
+        const phoneNumber = document.getElementById('phoneNumber').value;
+        const name = document.getElementById('nameField').value;
+        const email = document.getElementById('emailField').value;
+
+        fetch('/register-customer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phoneNumber, name, email })
+        })
+            .then(response => response.json())
+            .then(data => {
+                alert('Registration successful!');
+                closeForm();
+            })
+            .catch(() => {
+                alert('Registration failed. Please try again.');
+            });
+    }
+</script>
+</body>
+</html>
+

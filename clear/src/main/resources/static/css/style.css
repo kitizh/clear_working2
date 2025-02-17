@@ -1,0 +1,41 @@
+/* Стили для навигационного меню */
+.navbar {
+    display: flex;
+    justify-content: center;
+    background-color: #F7E1D7;
+    padding: 10px;
+    border-bottom: 2px solid #E8C8B8;
+}
+
+.nav-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+}
+
+.nav-links li {
+    margin: 0 15px;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #241918;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 5px;
+    background-color: #F7E1D7;
+    transition: background-color 0.3s;
+}
+
+.nav-links a:hover {
+    background-color: #E8C8B8;
+    color: #FFF;
+}
+
+.nav-links a.active {
+    background-color: #D4A29C;
+    color: #FFF;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+}

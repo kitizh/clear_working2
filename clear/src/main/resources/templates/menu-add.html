@@ -1,0 +1,12 @@
+<h2>Add New Dish</h2>
+<form th:action="@{/menu/add}" method="post">
+    <label>Dish Name: <input type="text" name="dishName" required></label>
+    <label>Description: <input type="text" name="description"></label>
+    <label>Price: <input type="number" step="0.01" name="price" required></label>
+    <label>Type:
+        <select name="menuTypeId">
+            <option th:each="type : ${menuTypes}" th:value="${type.menuTypeId}" th:text="${type.typeName}"></option>
+        </select>
+    </label>
+    <button type="submit">Add</button>
+</form>

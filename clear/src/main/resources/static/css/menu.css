@@ -1,0 +1,199 @@
+body {
+    margin: 0;
+    font-family: 'Lucida Console', monospace;
+    background-color: #F7F1ED;
+    overflow-y: auto;
+}
+
+.container {
+    margin: 0 auto;
+    width: 75%;
+    background-color: #FFF;
+    padding: 20px 0;
+    min-height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Исправленный заголовок "Menu" */
+h1 {
+    text-align: center;
+    color: #241918;
+    font-size: 32px;
+    font-weight: bold;
+    margin-top: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #E8C8B8;
+}
+
+/* Исправленная навигация */
+nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #F7E1D7;
+    padding: 15px;
+    border-bottom: 2px solid #E8C8B8;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+}
+
+nav ul li {
+    margin: 0 15px;
+}
+
+nav ul li a {
+    text-decoration: none;
+    color: #241918;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 8px 12px;
+    border-radius: 5px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+nav ul li a.active {
+    background-color: #D4A29C;
+    color: #FFF;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+nav ul li a:hover {
+    background-color: #E8C8B8;
+    color: #FFF;
+}
+
+/* Кнопка "Main Page" */
+.home-button {
+    position: absolute;
+    left: 15vw;
+    background-color: #996a5f;
+    color: #FFF;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 10px 15px;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.home-button:hover {
+    background-color: #7a5246;
+}
+
+/* Вкладки */
+.tabs {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.tab-button {
+    background-color: #F7E1D7;
+    color: #241918;
+    border: none;
+    padding: 10px 20px;
+    margin: 0 5px;
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.tab-button.active {
+    background-color: #E8C8B8;
+    color: #FFF;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.tab-button:hover {
+    background-color: #E8C8B8;
+}
+
+.tab-content {
+    display: none;
+}
+
+/* Таблица */
+.menu-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Фиксируем ширину столбцов */
+    margin: 20px 0;
+    background-color: #FFF;
+}
+
+.menu-table th, .menu-table td {
+    border: 2px solid #E8C8B8;
+    padding: 10px;
+    text-align: center;
+    word-wrap: break-word; /* Разрешаем перенос строк */
+}
+
+.menu-table th {
+    background-color: #F7E1D7;
+    color: #241918;
+    font-weight: bold;
+}
+
+.menu-table td {
+    color: #241918;
+}
+
+/* Фиксированная ширина столбцов */
+.menu-table colgroup col:nth-child(1) { width: 30%; }
+.menu-table colgroup col:nth-child(2) { width: 40%; }
+.menu-table colgroup col:nth-child(3) { width: 15%; }
+.menu-table colgroup col:nth-child(4) { width: 7.5%; }
+.menu-table colgroup col:nth-child(5) { width: 7.5%; }
+
+/* Кнопки Edit и Delete */
+.admin-btn {
+    text-decoration: none;
+    color: #FFF;
+    padding: 5px 15px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    margin: 5px;
+    transition: background-color 0.3s;
+}
+
+.admin-btn.edit {
+    background-color: #4CAF50;
+}
+
+.admin-btn.delete {
+    background-color: #E57373;
+}
+
+.admin-btn:hover {
+    opacity: 0.8;
+}
+
+/* Кнопка "Добавить блюдо" */
+.admin-actions {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.admin-actions a {
+    text-decoration: none;
+    color: #FFF;
+    background-color: #996a5f;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.admin-actions a:hover {
+    background-color: #7a5246;
+}

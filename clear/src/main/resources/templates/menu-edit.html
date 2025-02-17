@@ -1,0 +1,12 @@
+<h2>Edit Dish</h2>
+<form th:action="@{/menu/edit/{id}(id=${menu.menuId})}" method="post">
+    <label>Dish Name: <input type="text" name="dishName" th:value="${menu.dishName}" required></label>
+    <label>Description: <input type="text" name="description" th:value="${menu.description}"></label>
+    <label>Price: <input type="number" step="0.01" name="price" th:value="${menu.price}" required></label>
+    <label>Type:
+        <select name="menuTypeId">
+            <option th:each="type : ${menuTypes}" th:value="${type.menuTypeId}" th:text="${type.typeName}" th:selected="${menu.menuType.menuTypeId == type.menuTypeId}"></option>
+        </select>
+    </label>
+    <button type="submit">Update</button>
+</form>

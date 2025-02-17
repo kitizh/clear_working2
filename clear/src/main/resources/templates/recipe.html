@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Recipes</title>
+    <link rel="stylesheet" th:href="@{/css/recipe.css}">
+</head>
+<body>
+
+<div class="container">
+    <a href="/" class="home-button">Main Page</a>
+
+    <!-- Навигация -->
+    <nav>
+        <ul>
+            <li><a href="/menu">Menu</a></li>
+            <li><a href="/recipe" class="active">Recipes</a></li>
+        </ul>
+    </nav>
+
+    <h1>Recipes</h1>
+
+    <!-- Вкладки с категориями -->
+    <div class="tabs">
+        <button class="tab-button" th:each="type : ${menuTypes}"
+                th:text="${type.getTypeName()}"
+                th:attr="data-type=${type.getTypeName()}"
+                onclick="showTab(this)">
+        </button>
+    </div>
+
+    <!-- Контейнер для каждого типа блюда -->
+    <div th:each="type : ${menuTypes}" th:id="${type.getTypeName()}" class="tab-content" style="display: none;">
+        <h2 th:text="${type.getTypeName()}"></h2>
+
+        <!-- Список блюд -->
+        <ul class="recipe-list">
+            <li th:each="menu : ${menuItems.get(type.getTypeName())}"
+                class="recipe-item"
+                th:attr="data-recipe-id=${menu.menuId}"
+                onclick="showRecipe(this)">
+                <span th:text="${menu.dishName}" class="recipe-name"></span>
+            </li>
+        </ul>
+
+        <!-- Таблица рецепта -->
+        <div class="recipe-table-container" style="display: none;">
+            <h2 id="recipe-title"></h2>
+            <table class="recipe-table">
+                <tbody id="recipe-body">
+                <!-- Данные загружаются динамически -->
+                </tbody>
+            </table>
+            <button class="add-row-btn" onclick="addRecipeRow()" style="display: none;">➕ Add Ingredient</button>
+        </div>
+
+        <!-- Кнопка Edit -->
+        <div class="edit-actions">
+            <button class="edit-btn" onclick="toggleEditMode(this)">Edit</button>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    let activeRecipeId = null;
+    let editMode = false;
+    let recipeData = {}; // Будет заполняться динамически
+
+    function showTab(button) {
+        const type = button.getAttribute("data-type");
+
+        document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+        document.getElementById(type).style.display = 'block';
+
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+
+        document.querySelector('.recipe-table-container').style.display = 'none';
+        activeRecipeId = null;
+    }
+
+    function showRecipe(element) {
+        const recipeId = element.getAttribute("data-recipe-id");
+
+        if (activeRecipeId === recipeId) {
+            document.querySelector('.recipe-table-container').style.display = 'none';
+            activeRecipeId = null;
+            return;
+        }
+
+        activeRecipeId = recipeId;
+
+        document.querySelector('.recipe-table-container').style.display = 'block';
+        document.getElementById("recipe-title").textContent = element.textContent;
+
+        const recipeBody = document.getElementById("recipe-body");
+        recipeBody.innerHTML = "";
+
+        if (recipeData[recipeId]) {
+            recipeData[recipeId].forEach(item => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td contenteditable="${editMode}">${item.name}</td>
+                    <td contenteditable="${editMode}">${item.amount}</td>
+                    <td contenteditable="${editMode}">${item.unit}</td>
+                    <td><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td>
+                `;
+                recipeBody.appendChild(row);
+            });
+        }
+    }
+
+    function toggleEditMode(button) {
+        editMode = !editMode;
+        button.textContent = editMode ? "Save" : "Edit";
+
+        document.querySelectorAll('.recipe-table td[contenteditable]').forEach(td => {
+            td.contentEditable = editMode;
+        });
+
+        document.querySelector(".add-row-btn").style.display = editMode ? "block" : "none";
+
+        if (!editMode) {
+            saveChanges();
+        }
+    }
+
+    function addRecipeRow() {
+        const recipeBody = document.getElementById("recipe-body");
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td contenteditable="true"></td>
+            <td contenteditable="true"></td>
+            <td contenteditable="true"></td>
+            <td><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td>
+        `;
+        recipeBody.appendChild(row);
+    }
+
+    function deleteRow(button) {
+        button.parentElement.parentElement.remove();
+    }
+
+    function saveChanges() {
+        alert("Changes saved!");
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const firstTab = document.querySelector('.tab-button');
+        if (firstTab) {
+            showTab(firstTab);
+        }
+    });
+</script>
+
+</body>
+</html>
