@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Recipes</title>
+    <link rel="stylesheet" th:href="@{/css/menu.css}">
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            function showTab(type) {
+                document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+                document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+
+                let activeTab = document.getElementById(type);
+                if (activeTab) {
+                    activeTab.style.display = 'block';
+                    document.querySelector(`.tab-button[data-type="${type}"]`).classList.add('active');
+                }
+            }
+
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', function () {
+                    let type = this.getAttribute('data-type');
+                    showTab(type);
+                });
+            });
+
+            let firstTab = document.querySelector('.tab-button');
+            if (firstTab) {
+                showTab(firstTab.getAttribute('data-type'));
+            }
+
+            // Обработчик клика на блюдо для показа ингредиентов
+            document.querySelectorAll('.recipe-name').forEach(dish => {
+                dish.addEventListener('click', function () {
+                    let ingredientsTable = this.nextElementSibling;
+                    if (ingredientsTable.style.display === 'none' || ingredientsTable.style.display === '') {
+                        ingredientsTable.style.display = 'table';
+                    } else {
+                        ingredientsTable.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+
+    <style>
+        /* Стили для таблицы ингредиентов */
+        .ingredients-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background-color: #FFF;
+            display: none;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .ingredients-table th, .ingredients-table td {
+            border: 2px solid #E8C8B8;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .ingredients-table th {
+            background-color: #F7E1D7;
+            color: #241918;
+            font-weight: bold;
+        }
+
+        .ingredients-table td {
+            color: #241918;
+        }
+
+        /* Анимация появления таблицы */
+        .ingredients-table-enter {
+            opacity: 0;
+            transform: scaleY(0);
+        }
+
+        .ingredients-table-active {
+            opacity: 1;
+            transform: scaleY(1);
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <ul>
+        <li><a href="/" class="home-button">Main Page</a></li>
+        <li><a href="/menu">Menu</a></li>
+        <li><a href="/recipes" class="active">Recipes</a></li>
+    </ul>
+</nav>
+
+<div class="container">
+    <h1>Recipes</h1>
+
+    <div class="tabs">
+        <button class="tab-button" th:each="type : ${menuTypes}" th:text="${type}" th:attr="data-type=${type}"></button>
+    </div>
+
+    <div class="admin-actions" th:if="${isAdmin}">
+        <button id="edit-button">Edit</button>
+    </div>
+
+    <div th:each="type : ${menuTypes}" th:id="${type}" class="tab-content" style="display: none;">
+        <ul class="recipe-list">
+            <li th:each="dishName : ${recipesByType.get(type)}">
+                <span class="recipe-name" th:text="${dishName}" style="cursor: pointer; font-weight: bold;"></span>
+
+                <!-- Таблица ингредиентов (изначально скрыта) -->
+                <table class="ingredients-table">
+                    <thead>
+                    <tr>
+                        <th>Ингредиент</th>
+                        <th>Количество</th>
+                        <th>Ед. изм.</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="recipe : ${ingredientsByDish.get(dishName)}">
+                        <td th:text="${recipe.stock.item.itemName}"></td>
+                        <td th:text="${recipe.amount}"></td>
+                        <td th:text="${recipe.unit}"></td>
+                    </tr>
+                    <tr th:if="${ingredientsByDish.get(dishName) == null or #lists.isEmpty(ingredientsByDish.get(dishName))}">
+                        <td colspan="3">Ингредиентов пока нет</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </li>
+            <li th:if="${recipesByType.get(type) == null or #lists.isEmpty(recipesByType.get(type))}">
+                В этой категории пока нет блюд
+            </li>
+        </ul>
+    </div>
+</div>
+
+</body>
+</html>

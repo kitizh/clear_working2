@@ -12,14 +12,13 @@ public class Stock {
 
     @ManyToOne
     @JoinColumn(name = "item_id", nullable = false)
-    private AllItems item;
+    private AllItems item; // Связь с таблицей `all_items`
 
     @Column(nullable = false)
     private Double amount;
 
-    @ManyToOne
-    @JoinColumn(name = "unit_id", nullable = false)
-    private Unit unit;
+    @Column(nullable = false, length = 20)
+    private String unit; // Строковое поле
 
     public Long getStockId() {
         return stockId;
@@ -45,11 +44,11 @@ public class Stock {
         this.amount = amount;
     }
 
-    public Unit getUnit() {
+    public String getUnit() {
         return unit;
     }
 
-    public void setUnit(Unit unit) {
+    public void setUnit(String unit) {
         this.unit = unit;
     }
 }

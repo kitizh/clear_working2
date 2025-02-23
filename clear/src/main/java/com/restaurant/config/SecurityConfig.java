@@ -6,7 +6,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -19,8 +18,9 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login", "/css/**", "/images/**", "/js/**", "/menu", "/reserve").permitAll()  // Доступ к изображениям, стилям и скриптам без авторизации
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/login", "/css/**", "/images/**", "/js/**", "/menu", "/reserve").permitAll()  // Доступ к статическим ресурсам без авторизации
+                        .requestMatchers("/admin/**").hasRole("ADMIN") // Админские страницы
+                        .requestMatchers("/recipes").hasRole("ADMIN") // Доступ к рецептам только для админов
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
@@ -36,8 +36,6 @@ public class SecurityConfig {
 
         return http.build();
     }
-
-
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {

@@ -10,16 +10,11 @@ public class AllItems {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long itemId;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 100)
     private String itemName;
 
-    @ManyToOne
-    @JoinColumn(name = "product_type_id", nullable = false)
-    private ProductType productType;
-
-    @ManyToOne
-    @JoinColumn(name = "unit_id", nullable = false)
-    private Unit unit;
+    @Column(nullable = false, length = 50)
+    private String productType; // Теперь это просто строка
 
     public Long getItemId() {
         return itemId;
@@ -37,19 +32,11 @@ public class AllItems {
         this.itemName = itemName;
     }
 
-    public ProductType getProductType() {
+    public String getProductType() {
         return productType;
     }
 
-    public void setProductType(ProductType productType) {
+    public void setProductType(String productType) {
         this.productType = productType;
-    }
-
-    public Unit getUnit() {
-        return unit;
-    }
-
-    public void setUnit(Unit unit) {
-        this.unit = unit;
     }
 }

@@ -1,3 +1,4 @@
+/* Общие стили */
 body {
     margin: 0;
     font-family: 'Lucida Console', monospace;
@@ -5,6 +6,7 @@ body {
     overflow-y: auto;
 }
 
+/* Контейнер страницы */
 .container {
     margin: 0 auto;
     width: 75%;
@@ -13,9 +15,10 @@ body {
     min-height: calc(100vh - 40px);
     display: flex;
     flex-direction: column;
+    align-items: center;
 }
 
-/* Исправленный заголовок "Menu" */
+/* Заголовок */
 h1 {
     text-align: center;
     color: #241918;
@@ -26,14 +29,13 @@ h1 {
     border-bottom: 2px solid #E8C8B8;
 }
 
-/* Исправленная навигация */
+/* Навигация */
 nav {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    width: 100%;
     background-color: #F7E1D7;
-    padding: 15px;
+    padding: 15px 0;
     border-bottom: 2px solid #E8C8B8;
+    text-align: center;
 }
 
 nav ul {
@@ -41,6 +43,7 @@ nav ul {
     padding: 0;
     margin: 0;
     display: flex;
+    justify-content: center;
 }
 
 nav ul li {
@@ -66,24 +69,6 @@ nav ul li a.active {
 nav ul li a:hover {
     background-color: #E8C8B8;
     color: #FFF;
-}
-
-/* Кнопка "Main Page" */
-.home-button {
-    position: absolute;
-    left: 15vw;
-    background-color: #996a5f;
-    color: #FFF;
-    text-decoration: none;
-    font-size: 16px;
-    font-weight: bold;
-    padding: 10px 15px;
-    border-radius: 5px;
-    transition: background-color 0.3s;
-}
-
-.home-button:hover {
-    background-color: #7a5246;
 }
 
 /* Вкладки */
@@ -119,11 +104,11 @@ nav ul li a:hover {
     display: none;
 }
 
-/* Таблица */
+/* Таблица меню */
 .menu-table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed; /* Фиксируем ширину столбцов */
+    table-layout: fixed;
     margin: 20px 0;
     background-color: #FFF;
 }
@@ -132,7 +117,7 @@ nav ul li a:hover {
     border: 2px solid #E8C8B8;
     padding: 10px;
     text-align: center;
-    word-wrap: break-word; /* Разрешаем перенос строк */
+    word-wrap: break-word;
 }
 
 .menu-table th {
@@ -152,7 +137,7 @@ nav ul li a:hover {
 .menu-table colgroup col:nth-child(4) { width: 7.5%; }
 .menu-table colgroup col:nth-child(5) { width: 7.5%; }
 
-/* Кнопки Edit и Delete */
+/* Кнопки действий */
 .admin-btn {
     text-decoration: none;
     color: #FFF;
@@ -177,23 +162,56 @@ nav ul li a:hover {
     opacity: 0.8;
 }
 
-/* Кнопка "Добавить блюдо" */
+/* Стили списка рецептов */
+.recipe-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.recipe-list li {
+    background: #F7E1D7;
+    margin: 5px 0;
+    padding: 12px;
+    border-radius: 5px;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.3s ease-in-out;
+}
+
+.recipe-list li:hover {
+    background-color: #E8C8B8;
+}
+
+/* Кнопка Edit */
 .admin-actions {
     text-align: center;
-    margin-top: 20px;
+    margin-top: 30px;
+    margin-bottom: 20px;
 }
 
-.admin-actions a {
-    text-decoration: none;
-    color: #FFF;
-    background-color: #996a5f;
-    padding: 10px 15px;
-    border-radius: 5px;
+.admin-actions button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 12px 20px;
     font-size: 16px;
-    font-weight: bold;
-    transition: background-color 0.3s;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s, transform 0.2s;
 }
 
-.admin-actions a:hover {
-    background-color: #7a5246;
+.admin-actions button:hover {
+    background-color: #45a049;
+    transform: scale(1.05);
+}
+
+/* Скрытие столбца действий, пока не включён режим редактирования */
+.actions-column {
+    display: none;
+}
+
+.edit-mode .actions-column {
+    display: table-cell;
 }

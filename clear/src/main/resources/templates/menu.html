@@ -5,85 +5,147 @@
     <title>Menu</title>
     <link rel="stylesheet" th:href="@{/css/menu.css}">
     <script>
-        function showTab(type) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
-            document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
-            document.getElementById(type).style.display = 'block';
-            document.querySelector(`.tab-button[data-type="${type}"]`).classList.add('active');
-        }
-
         document.addEventListener('DOMContentLoaded', function () {
-            const buttons = document.querySelectorAll('.tab-button');
-            if (buttons.length > 0) {
-                showTab(buttons[0].getAttribute('data-type'));
+            let isEditing = false;
+
+            function toggleEditMode() {
+                isEditing = !isEditing;
+                document.querySelectorAll('.editable').forEach(cell => {
+                    cell.contentEditable = isEditing ? "true" : "false";
+                    cell.classList.toggle('editing', isEditing);
+                });
+
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.style.display = isEditing ? "inline-block" : "none";
+                });
+
+                document.getElementById('edit-button').textContent = isEditing ? "Save" : "Edit";
+
+                // Показываем или скрываем столбец "Действия"
+                document.body.classList.toggle('edit-mode', isEditing);
+
+                if (!isEditing) {
+                    saveChanges();
+                }
             }
 
-            buttons.forEach(button => {
-                button.addEventListener('click', () => showTab(button.getAttribute('data-type')));
+            function saveChanges() {
+                let updatedData = [];
+                document.querySelectorAll('.menu-row').forEach(row => {
+                    updatedData.push({
+                        menuId: row.dataset.menuId,
+                        dishName: row.querySelector('.dish-name').textContent.trim(),
+                        description: row.querySelector('.description').textContent.trim(),
+                        price: row.querySelector('.price').textContent.trim()
+                    });
+                });
+
+                fetch('/menu/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedData)
+                }).then(response => {
+                    if (!response.ok) alert('Ошибка при сохранении.');
+                });
+            }
+
+            function deleteDish(menuId, row) {
+                fetch('/menu/delete/' + menuId, { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) row.remove();
+                        else alert('Ошибка при удалении.');
+                    });
+            }
+
+            document.getElementById('edit-button')?.addEventListener('click', toggleEditMode);
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    deleteDish(this.closest('.menu-row').dataset.menuId, this.closest('.menu-row'));
+                });
             });
+
+            // ПОКАЗЫВАЕМ ПЕРВУЮ ВКЛАДКУ ПРИ ЗАГРУЗКЕ
+            function showTab(type) {
+                document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+                document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+
+                let activeTab = document.getElementById(type);
+                if (activeTab) {
+                    activeTab.style.display = 'block';
+                    document.querySelector(`.tab-button[data-type="${type}"]`).classList.add('active');
+                }
+            }
+
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', function () {
+                    let type = this.getAttribute('data-type');
+                    showTab(type);
+                });
+            });
+
+            let firstTab = document.querySelector('.tab-button');
+            if (firstTab) {
+                showTab(firstTab.getAttribute('data-type'));
+            }
         });
     </script>
+
+
 </head>
 <body>
 
+<nav>
+    <ul>
+        <li><a href="/" class="home-button">Main Page</a></li>
+        <li><a href="/menu" class="active">Menu</a></li>
+        <li><a href="/recipes">Recipes</a></li>
+    </ul>
+</nav>
+
 <div class="container">
-    <a href="/" class="home-button">Main Page</a>
-
-    <nav>
-        <ul>
-            <li><a href="/menu" class="active">Menu</a></li>
-            <li><a href="/recipe">Recipes</a></li>
-        </ul>
-    </nav>
-
     <h1>Menu</h1>
 
     <div class="tabs">
-        <button class="tab-button" th:each="type : ${menuTypes}"
-                th:text="${type.getTypeName()}"
-                th:attr="data-type=${type.getTypeName()}">
-        </button>
+        <button class="tab-button" th:each="type : ${menuTypes}" th:text="${type}" th:attr="data-type=${type}"></button>
     </div>
 
-    <div th:each="type : ${menuTypes}" th:id="${type.getTypeName()}" class="tab-content" style="display: none;">
+    <div class="admin-actions" th:if="${isAdmin}">
+        <button id="edit-button">Edit</button>
+    </div>
 
+    <div th:each="type : ${menuTypes}" th:id="${type}" class="tab-content" style="display: none;">
         <table class="menu-table">
-            <!-- Фиксируем ширину столбцов -->
             <colgroup>
-                <col style="width: 20%;">
-                <col style="width: 40%;">
-                <col style="width: 20%;">
-                <col th:if="${isAdmin}" style="width: 7.5%;">
-                <col th:if="${isAdmin}" style="width: 7.5%;">
+                <col style="width: 30%;"> <!-- Название блюда -->
+                <col style="width: 40%;"> <!-- Описание -->
+                <col style="width: 15%;"> <!-- Цена -->
+                <col th:if="${isAdmin}" class="actions-column" style="width: 15%;"> <!-- Действия (если админ) -->
             </colgroup>
             <thead>
             <tr>
                 <th>Блюдо</th>
                 <th>Описание</th>
                 <th>Стоимость</th>
-                <th th:if="${isAdmin}"></th>
-                <th th:if="${isAdmin}"></th>
+                <th th:if="${isAdmin}" class="actions-column">Действия</th>
             </tr>
             </thead>
             <tbody>
-            <tr th:each="menu : ${menuItems.get(type.getTypeName())}">
-                <td th:text="${menu.dishName}"></td>
-                <td th:text="${menu.description}"></td>
-                <td th:text="${menu.price}"></td>
-                <td th:if="${isAdmin}">
-                    <button class="admin-btn edit" th:onclick="|window.location.href='/menu/edit/${menu.menuId}'|">Edit</button>
+            <tr th:each="menu : ${menuItems.get(type)}" class="menu-row"
+                th:attr="data-menu-id=${menu.menuId}">
+                <td class="dish-name editable" th:text="${menu.dishName}"></td>
+                <td class="description editable" th:text="${menu.description}"></td>
+                <td class="price editable" th:text="${menu.price}"></td>
+                <td th:if="${isAdmin}" class="actions-column">
+                    <button class="delete-btn" style="display: none;">Delete</button>
                 </td>
-                <td th:if="${isAdmin}">
-                    <button class="admin-btn delete" th:onclick="|window.location.href='/menu/delete/${menu.menuId}'|">Delete</button>
-                </td>
+            </tr>
+            <tr th:if="${menuItems.get(type) == null or #lists.isEmpty(menuItems.get(type))}">
+                <td colspan="4">Блюд в этой категории пока нет</td>
             </tr>
             </tbody>
         </table>
     </div>
 
-    <div class="admin-actions" th:if="${isAdmin}">
-        <a href="/menu/add">Add New Dish</a>
-    </div>
 </div>
 
 </body>

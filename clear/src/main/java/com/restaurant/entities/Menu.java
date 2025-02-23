@@ -18,11 +18,9 @@ public class Menu {
     @Column(nullable = false)
     private Double price;
 
-    @ManyToOne
-    @JoinColumn(name = "menu_type_id", nullable = false)
-    private MenuType menuType;
+    @Column(nullable = false)
+    private String menuType; // Теперь это строка
 
-    // Геттеры и сеттеры
     public Long getMenuId() {
         return menuId;
     }
@@ -55,11 +53,12 @@ public class Menu {
         this.price = price;
     }
 
-    public MenuType getMenuType() {
+    public String getMenuType() {
         return menuType;
     }
 
-    public void setMenuType(MenuType menuType) {
+    public void setMenuType(String menuType) {
         this.menuType = menuType;
     }
+
 }

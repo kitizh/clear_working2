@@ -16,14 +16,13 @@ public class Recipe {
 
     @ManyToOne
     @JoinColumn(name = "stock_id", nullable = false)
-    private Stock stock;
+    private Stock stock; // Связь с `Stock`
 
     @Column(nullable = false)
     private Double amount;
 
-    @ManyToOne
-    @JoinColumn(name = "unit_id", nullable = false)
-    private Unit unit;
+    @Column(nullable = false)
+    private String unit; // Строка вместо связи
 
     public Long getRecipeId() {
         return recipeId;
@@ -57,12 +56,11 @@ public class Recipe {
         this.amount = amount;
     }
 
-    public Unit getUnit() {
+    public String getUnit() {
         return unit;
     }
 
-    public void setUnit(Unit unit) {
+    public void setUnit(String unit) {
         this.unit = unit;
     }
 }
-
