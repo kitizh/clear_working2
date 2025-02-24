@@ -6,6 +6,63 @@
     <link rel="stylesheet" th:href="@{/css/menu.css}">
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            let isEditing = false;
+
+            function toggleEditMode() {
+                isEditing = !isEditing;
+                document.querySelectorAll('.editable').forEach(cell => {
+                    cell.contentEditable = isEditing ? "true" : "false";
+                    cell.classList.toggle('editing', isEditing);
+                });
+
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.style.display = isEditing ? "inline-block" : "none";
+                });
+
+                document.getElementById('edit-button').textContent = isEditing ? "Save" : "Edit";
+
+                // Показываем или скрываем столбец "Действия"
+                document.body.classList.toggle('edit-mode', isEditing);
+
+                if (!isEditing) {
+                    saveChanges();
+                }
+            }
+
+            function saveChanges() {
+                let updatedData = [];
+                document.querySelectorAll('.recipe-row').forEach(row => {
+                    updatedData.push({
+                        recipeId: row.dataset.recipeId,
+                        amount: row.querySelector('.amount').textContent.trim(),
+                        unit: row.querySelector('.unit').textContent.trim()
+                    });
+                });
+
+                fetch('/recipes/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedData)
+                }).then(response => {
+                    if (!response.ok) alert('Ошибка при сохранении.');
+                });
+            }
+
+            function deleteDish(recipeId, row) {
+                fetch('/recipes/delete/' + recipeId, { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) row.remove();
+                        else alert('Ошибка при удалении.');
+                    });
+            }
+
+            document.getElementById('edit-button')?.addEventListener('click', toggleEditMode);
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    deleteDish(this.closest('.recipe-row').dataset.recipeId, this.closest('.recipe-row'));
+                });
+            });
+
             function showTab(type) {
                 document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
                 document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
@@ -34,7 +91,9 @@
                 dish.addEventListener('click', function () {
                     let ingredientsTable = this.nextElementSibling;
                     if (ingredientsTable.style.display === 'none' || ingredientsTable.style.display === '') {
+                        document.querySelectorAll('.recipe-name').forEach(ingredient => ingredient.nextElementSibling.style.display = 'none');
                         ingredientsTable.style.display = 'table';
+
                     } else {
                         ingredientsTable.style.display = 'none';
                     }
@@ -42,46 +101,6 @@
             });
         });
     </script>
-
-    <style>
-        /* Стили для таблицы ингредиентов */
-        .ingredients-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            background-color: #FFF;
-            display: none;
-            transition: all 0.3s ease-in-out;
-        }
-
-        .ingredients-table th, .ingredients-table td {
-            border: 2px solid #E8C8B8;
-            padding: 10px;
-            text-align: center;
-        }
-
-        .ingredients-table th {
-            background-color: #F7E1D7;
-            color: #241918;
-            font-weight: bold;
-        }
-
-        .ingredients-table td {
-            color: #241918;
-        }
-
-        /* Анимация появления таблицы */
-        .ingredients-table-enter {
-            opacity: 0;
-            transform: scaleY(0);
-        }
-
-        .ingredients-table-active {
-            opacity: 1;
-            transform: scaleY(1);
-            transition: all 0.3s ease-in-out;
-        }
-    </style>
 </head>
 <body>
 
@@ -106,11 +125,17 @@
 
     <div th:each="type : ${menuTypes}" th:id="${type}" class="tab-content" style="display: none;">
         <ul class="recipe-list">
-            <li th:each="dishName : ${recipesByType.get(type)}">
+            <li th:each="dishName : ${recipesByType.get(type)}" class="name-and-table">
                 <span class="recipe-name" th:text="${dishName}" style="cursor: pointer; font-weight: bold;"></span>
 
                 <!-- Таблица ингредиентов (изначально скрыта) -->
                 <table class="ingredients-table">
+                    <colgroup>
+                        <col style="width: 55%;"> <!-- Название блюда -->
+                        <col style="width: 15%;"> <!-- Описание -->
+                        <col style="width: 15%;"> <!-- Цена -->
+                        <col th:if="${isAdmin}" class="actions-column" style="width: 15%;"> <!-- Действия (если админ) -->
+                    </colgroup>
                     <thead>
                     <tr>
                         <th>Ингредиент</th>
@@ -119,10 +144,14 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="recipe : ${ingredientsByDish.get(dishName)}">
-                        <td th:text="${recipe.stock.item.itemName}"></td>
-                        <td th:text="${recipe.amount}"></td>
-                        <td th:text="${recipe.unit}"></td>
+                    <tr th:each="recipe : ${ingredientsByDish.get(dishName)}" class="recipe-row"
+                        th:attr="data-recipe-id=${recipe.recipeId}">
+                        <td class="item editable" th:text="${recipe.stock.item.itemName}"></td>
+                        <td class="amount editable" th:text="${recipe.amount}"></td>
+                        <td class="unit editable" th:text="${recipe.unit}"></td>
+                        <td th:if="${isAdmin}" class="actions-column">
+                            <button class="delete-btn" style="display: none;">Delete</button>
+                        </td>
                     </tr>
                     <tr th:if="${ingredientsByDish.get(dishName) == null or #lists.isEmpty(ingredientsByDish.get(dishName))}">
                         <td colspan="3">Ингредиентов пока нет</td>

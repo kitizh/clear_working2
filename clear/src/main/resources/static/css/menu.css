@@ -102,6 +102,7 @@ nav ul li a:hover {
 
 .tab-content {
     display: none;
+    width: 100%;
 }
 
 /* Таблица меню */
@@ -111,6 +112,43 @@ nav ul li a:hover {
     table-layout: fixed;
     margin: 20px 0;
     background-color: #FFF;
+}
+
+table.ingredients-table {
+    width: 100%;
+    table-layout: fixed;  /* Это сделает ширину ячеек равной по всей таблице */
+    border-collapse: collapse;
+    background-color: #FFF;
+    margin: 20px 0;
+    display: none;
+}
+
+table.ingredients-table-active {
+    opacity: 1;
+    transform: scaleY(1);
+    transition: all 0.3s ease-in-out;
+}
+
+table.ingredients-table-enter {
+    opacity: 0;
+    transform: scaleY(0);
+}
+
+table.ingredients-table th, table.ingredients-table td {
+    border: 2px solid #E8C8B8;
+    padding: 10px;
+    text-align: center;
+    word-wrap: break-word;
+}
+
+table.ingredients-table th {
+    background-color: #F7E1D7;
+    color: #241918;
+    font-weight: bold;
+}
+
+table.ingredients-table td {
+    color: #241918;
 }
 
 .menu-table th, .menu-table td {
@@ -131,6 +169,12 @@ nav ul li a:hover {
 }
 
 /* Фиксированная ширина столбцов */
+.menu-table colgroup col:nth-child(1) { width: 30%; }
+.menu-table colgroup col:nth-child(2) { width: 40%; }
+.menu-table colgroup col:nth-child(3) { width: 15%; }
+.menu-table colgroup col:nth-child(4) { width: 7.5%; }
+.menu-table colgroup col:nth-child(5) { width: 7.5%; }
+
 .menu-table colgroup col:nth-child(1) { width: 30%; }
 .menu-table colgroup col:nth-child(2) { width: 40%; }
 .menu-table colgroup col:nth-child(3) { width: 15%; }
@@ -214,4 +258,8 @@ nav ul li a:hover {
 
 .edit-mode .actions-column {
     display: table-cell;
+}
+
+span.recipe-name {
+    user-select: none;
 }
