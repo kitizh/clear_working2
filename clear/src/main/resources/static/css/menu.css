@@ -263,3 +263,28 @@ table.ingredients-table td {
 span.recipe-name {
     user-select: none;
 }
+
+/* Стили для формы добавления нового блюда */
+.add-form {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.add-form label {
+    margin-right: 5px;
+}
+.add-form select,
+.add-form input {
+    padding: 5px;
+    font-size: 14px;
+}
+.add-form button {
+    padding: 5px 10px;
+    font-size: 14px;
+    cursor: pointer;
+}
+

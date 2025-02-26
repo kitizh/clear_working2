@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Menu</title>
     <link rel="stylesheet" th:href="@{/css/menu.css}">
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             let isEditing = false;
@@ -20,8 +21,6 @@
                 });
 
                 document.getElementById('edit-button').textContent = isEditing ? "Save" : "Edit";
-
-                // Показываем или скрываем столбец "Действия"
                 document.body.classList.toggle('edit-mode', isEditing);
 
                 if (!isEditing) {
@@ -64,7 +63,7 @@
                 });
             });
 
-            // ПОКАЗЫВАЕМ ПЕРВУЮ ВКЛАДКУ ПРИ ЗАГРУЗКЕ
+            // Функция показа вкладок
             function showTab(type) {
                 document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
                 document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
@@ -72,7 +71,7 @@
                 let activeTab = document.getElementById(type);
                 if (activeTab) {
                     activeTab.style.display = 'block';
-                    document.querySelector(`.tab-button[data-type="${type}"]`).classList.add('active');
+                    document.querySelector(`.tab-button[data-type="${type}"]`)?.classList.add('active');
                 }
             }
 
@@ -83,14 +82,138 @@
                 });
             });
 
+            // Обработчик для выпадающего списка формы добавления:
+            // если выбран вариант "Другое" – разблокируем поле ввода типа блюда.
+            document.getElementById("menuTypeSelect")?.addEventListener("change", function() {
+                if (this.value === "Другое") {
+                    document.getElementById("customTypeInput").disabled = false;
+                } else {
+                    document.getElementById("customTypeInput").disabled = true;
+                    document.getElementById("customTypeInput").value = "";
+                }
+            });
+
+            // Функция для добавления нового блюда через POST-запрос
+            document.getElementById("addDishButton")?.addEventListener("click", function() {
+                let select = document.getElementById("menuTypeSelect");
+                let selectedType = select.value;
+                let dishType;
+                if (selectedType === "Другое") {
+                    dishType = document.getElementById("customTypeInput").value.trim();
+                    if (dishType === "") {
+                        alert("Введите тип блюда");
+                        return;
+                    }
+                } else {
+                    dishType = selectedType;
+                }
+                let dishName = document.getElementById("dishNameInput").value.trim();
+                if (dishName === "") {
+                    alert("Введите название блюда");
+                    return;
+                }
+
+                // Формируем объект нового блюда
+                let newDish = {
+                    menuType: dishType,
+                    dishName: dishName,
+                    description: "-", // дефолтное описание
+                    price: 0        // дефолтная цена
+                };
+
+                // Отправляем POST-запрос на endpoint /menu/add
+                fetch('/menu/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(newDish)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Ошибка при добавлении блюда');
+                        }
+                        return response.json();
+                    })
+                    .then(addedDish => {
+                        // Обновляем интерфейс – добавляем блюдо в таблицу вкладки нужного типа
+                        let tabContent = document.getElementById(dishType);
+                        if (!tabContent) {
+                            // Если вкладка ещё не создана, создаём кнопку и контейнер для новой вкладки
+                            let tabButton = document.createElement("button");
+                            tabButton.className = "tab-button";
+                            tabButton.setAttribute("data-type", dishType);
+                            tabButton.textContent = dishType;
+                            tabButton.addEventListener("click", function() {
+                                showTab(dishType);
+                            });
+                            document.querySelector(".tabs").appendChild(tabButton);
+
+                            // Создаем контейнер для содержимого вкладки с таблицей
+                            tabContent = document.createElement("div");
+                            tabContent.id = dishType;
+                            tabContent.className = "tab-content";
+                            tabContent.style.display = "none";
+                            let table = document.createElement("table");
+                            table.className = "menu-table";
+                            table.innerHTML = `
+              <colgroup>
+                <col style="width: 30%;">
+                <col style="width: 40%;">
+                <col style="width: 15%;">
+                <col style="width: 15%;">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Блюдо</th>
+                  <th>Описание</th>
+                  <th>Стоимость</th>
+                  <th class="actions-column">Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            `;
+                            tabContent.appendChild(table);
+                            document.querySelector(".container").appendChild(tabContent);
+                        }
+                        let table = tabContent.querySelector("table.menu-table");
+                        let tbody = table.querySelector("tbody");
+                        // Если присутствует строка "Блюд в этой категории пока нет", удаляем её
+                        let noDishesRow = tbody.querySelector(".no-dishes");
+                        if (noDishesRow) {
+                            noDishesRow.remove();
+                        }
+                        // Создаем новую строку с данными блюда
+                        let newRow = document.createElement("tr");
+                        newRow.className = "menu-row";
+                        newRow.dataset.menuId = addedDish.menuId; // id, возвращенный сервером
+                        newRow.innerHTML = `
+            <td class="dish-name editable">${addedDish.dishName}</td>
+            <td class="description editable">${addedDish.description}</td>
+            <td class="price editable">${addedDish.price}</td>
+            <td class="actions-column">
+              <button class="delete-btn" style="display: none;">Delete</button>
+            </td>
+          `;
+                        tbody.appendChild(newRow);
+                        // Очищаем поля ввода
+                        document.getElementById("dishNameInput").value = "";
+                        if (selectedType === "Другое") {
+                            document.getElementById("customTypeInput").value = "";
+                        }
+                    })
+                    .catch(error => {
+                        alert(error.message);
+                    });
+            });
+
             let firstTab = document.querySelector('.tab-button');
             if (firstTab) {
                 showTab(firstTab.getAttribute('data-type'));
             }
         });
     </script>
-
-
 </head>
 <body>
 
@@ -105,6 +228,7 @@
 <div class="container">
     <h1>Menu</h1>
 
+    <!-- Вкладки для категорий блюд -->
     <div class="tabs">
         <button class="tab-button" th:each="type : ${menuTypes}" th:text="${type}" th:attr="data-type=${type}"></button>
     </div>
@@ -113,13 +237,27 @@
         <button id="edit-button">Edit</button>
     </div>
 
+    <!-- Форма добавления нового блюда -->
+    <div class="add-form">
+        <label for="menuTypeSelect">Тип блюда:</label>
+        <select id="menuTypeSelect">
+            <option th:each="type : ${menuTypes}" th:value="${type}" th:text="${type}"></option>
+            <option value="Другое">Другое</option>
+        </select>
+        <input type="text" id="customTypeInput" placeholder="Введите тип блюда" disabled>
+        <label for="dishNameInput">Название блюда:</label>
+        <input type="text" id="dishNameInput" placeholder="Введите название блюда">
+        <button id="addDishButton">Add</button>
+    </div>
+
+    <!-- Содержимое вкладок с таблицами для каждого типа блюда -->
     <div th:each="type : ${menuTypes}" th:id="${type}" class="tab-content" style="display: none;">
         <table class="menu-table">
             <colgroup>
-                <col style="width: 30%;"> <!-- Название блюда -->
-                <col style="width: 40%;"> <!-- Описание -->
-                <col style="width: 15%;"> <!-- Цена -->
-                <col th:if="${isAdmin}" class="actions-column" style="width: 15%;"> <!-- Действия (если админ) -->
+                <col style="width: 30%;">
+                <col style="width: 40%;">
+                <col style="width: 15%;">
+                <col th:if="${isAdmin}" class="actions-column" style="width: 15%;">
             </colgroup>
             <thead>
             <tr>
@@ -130,8 +268,7 @@
             </tr>
             </thead>
             <tbody>
-            <tr th:each="menu : ${menuItems.get(type)}" class="menu-row"
-                th:attr="data-menu-id=${menu.menuId}">
+            <tr th:each="menu : ${menuItems.get(type)}" class="menu-row" th:attr="data-menu-id=${menu.menuId}">
                 <td class="dish-name editable" th:text="${menu.dishName}"></td>
                 <td class="description editable" th:text="${menu.description}"></td>
                 <td class="price editable" th:text="${menu.price}"></td>
@@ -139,7 +276,7 @@
                     <button class="delete-btn" style="display: none;">Delete</button>
                 </td>
             </tr>
-            <tr th:if="${menuItems.get(type) == null or #lists.isEmpty(menuItems.get(type))}">
+            <tr th:if="${menuItems.get(type) == null or #lists.isEmpty(menuItems.get(type))}" class="no-dishes">
                 <td colspan="4">Блюд в этой категории пока нет</td>
             </tr>
             </tbody>

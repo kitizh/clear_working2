@@ -4,7 +4,6 @@ import com.restaurant.entities.Menu;
 import com.restaurant.repositories.RecipeRepository;
 import com.restaurant.repositories.MenuRepository;
 import com.restaurant.entities.Recipe;
-import com.restaurant.services.RecipeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -22,12 +21,10 @@ import java.util.stream.Collectors;
 @RequestMapping("/recipes")
 public class RecipeController {
 
-    private final RecipeService recipeService;
 
     private final RecipeRepository recipeRepository;
 
-    public RecipeController(RecipeService recipeService, RecipeRepository recipeRepository) {
-        this.recipeService = recipeService;
+    public RecipeController(RecipeRepository recipeRepository) {
         this.recipeRepository = recipeRepository;
     }
 

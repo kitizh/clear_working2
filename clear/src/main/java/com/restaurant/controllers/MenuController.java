@@ -79,4 +79,20 @@ public class MenuController {
         menuRepository.deleteById(id);
         return ResponseEntity.ok().build();
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/add")
+    @ResponseBody
+    public ResponseEntity<Menu> addMenuItem(@RequestBody Menu newMenu) {
+        // Если описание не указано, задаем дефолтное значение
+        if (newMenu.getDescription() == null || newMenu.getDescription().isEmpty()) {
+            newMenu.setDescription("-");
+        }
+        // Устанавливаем цену по умолчанию равной 0
+        newMenu.setPrice(0.0);
+        // Сохраняем новое блюдо в БД
+        Menu savedMenu = menuRepository.save(newMenu);
+        return ResponseEntity.ok(savedMenu);
+    }
+
 }
