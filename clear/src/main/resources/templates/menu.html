@@ -222,23 +222,30 @@
         <li><a href="/" class="home-button">Main Page</a></li>
         <li><a href="/menu" class="active">Menu</a></li>
         <li><a href="/recipes">Recipes</a></li>
+        <li><a href="/stock">Stock</a></li>
     </ul>
 </nav>
 
 <div class="container">
     <h1>Menu</h1>
 
-    <!-- Вкладки для категорий блюд -->
+    <!-- Вкладки для категорий блюд.
+         Отображаются, если isAdmin или в категории есть хотя бы одно блюдо с ценой > 0 -->
     <div class="tabs">
-        <button class="tab-button" th:each="type : ${menuTypes}" th:text="${type}" th:attr="data-type=${type}"></button>
+        <button class="tab-button"
+                th:each="type : ${menuTypes}"
+                th:if="${isAdmin or (menuItems.get(type)?.![price > 0].contains(true))}"
+                th:text="${type}"
+                th:attr="data-type=${type}">
+        </button>
     </div>
 
     <div class="admin-actions" th:if="${isAdmin}">
         <button id="edit-button">Edit</button>
     </div>
 
-    <!-- Форма добавления нового блюда -->
-    <div class="add-form">
+    <!-- Форма добавления нового блюда (отображается только для админа) -->
+    <div class="add-form" th:if="${isAdmin}">
         <label for="menuTypeSelect">Тип блюда:</label>
         <select id="menuTypeSelect">
             <option th:each="type : ${menuTypes}" th:value="${type}" th:text="${type}"></option>
@@ -250,8 +257,11 @@
         <button id="addDishButton">Add</button>
     </div>
 
-    <!-- Содержимое вкладок с таблицами для каждого типа блюда -->
-    <div th:each="type : ${menuTypes}" th:id="${type}" class="tab-content" style="display: none;">
+    <!-- Содержимое вкладок с таблицами для каждого типа блюда.
+         Отображается, если isAdmin или в категории есть хотя бы одно блюдо с ценой > 0 -->
+    <div th:each="type : ${menuTypes}"
+         th:if="${isAdmin or (menuItems.get(type)?.![price > 0].contains(true))}"
+         th:id="${type}" class="tab-content" style="display: none;">
         <table class="menu-table">
             <colgroup>
                 <col style="width: 30%;">
@@ -268,7 +278,10 @@
             </tr>
             </thead>
             <tbody>
-            <tr th:each="menu : ${menuItems.get(type)}" class="menu-row" th:attr="data-menu-id=${menu.menuId}">
+            <!-- Вывод блюд: строки с ценой 0 видны только администратору -->
+            <tr th:each="menu : ${menuItems.get(type)}" class="menu-row"
+                th:if="${menu.price != 0} or ${isAdmin}"
+                th:attr="data-menu-id=${menu.menuId}">
                 <td class="dish-name editable" th:text="${menu.dishName}"></td>
                 <td class="description editable" th:text="${menu.description}"></td>
                 <td class="price editable" th:text="${menu.price}"></td>

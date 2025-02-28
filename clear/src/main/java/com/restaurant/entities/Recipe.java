@@ -14,52 +14,44 @@ public class Recipe {
     @JoinColumn(name = "menu_id", nullable = false)
     private Menu menu;
 
+    // Изменённая связь: теперь Recipe связывается напрямую с AllItems через столбец item_id
     @ManyToOne
-    @JoinColumn(name = "stock_id", nullable = false)
-    private Stock stock; // Связь с `Stock`
+    @JoinColumn(name = "item_id", nullable = false)
+    private AllItems item;
 
     @Column(nullable = false)
     private Double amount;
 
     @Column(nullable = false)
-    private String unit; // Строка вместо связи
+    private String unit;
 
     public Long getRecipeId() {
         return recipeId;
     }
-
     public void setRecipeId(Long recipeId) {
         this.recipeId = recipeId;
     }
-
     public Menu getMenu() {
         return menu;
     }
-
     public void setMenu(Menu menu) {
         this.menu = menu;
     }
-
-    public Stock getStock() {
-        return stock;
+    public AllItems getItem() {
+        return item;
     }
-
-    public void setStock(Stock stock) {
-        this.stock = stock;
+    public void setItem(AllItems item) {
+        this.item = item;
     }
-
     public Double getAmount() {
         return amount;
     }
-
     public void setAmount(Double amount) {
         this.amount = amount;
     }
-
     public String getUnit() {
         return unit;
     }
-
     public void setUnit(String unit) {
         this.unit = unit;
     }

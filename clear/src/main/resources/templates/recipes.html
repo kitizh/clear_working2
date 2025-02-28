@@ -1,170 +1,438 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Recipes</title>
+    <title>Рецепты</title>
+    <!-- Подключаем стили из menu.css для единого оформления -->
     <link rel="stylesheet" th:href="@{/css/menu.css}">
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            let isEditing = false;
-
-            function toggleEditMode() {
-                isEditing = !isEditing;
-                document.querySelectorAll('.editable').forEach(cell => {
-                    cell.contentEditable = isEditing ? "true" : "false";
-                    cell.classList.toggle('editing', isEditing);
-                });
-
-                document.querySelectorAll('.delete-btn').forEach(btn => {
-                    btn.style.display = isEditing ? "inline-block" : "none";
-                });
-
-                document.getElementById('edit-button').textContent = isEditing ? "Save" : "Edit";
-
-                // Показываем или скрываем столбец "Действия"
-                document.body.classList.toggle('edit-mode', isEditing);
-
-                if (!isEditing) {
-                    saveChanges();
-                }
-            }
-
-            function saveChanges() {
-                let updatedData = [];
-                document.querySelectorAll('.recipe-row').forEach(row => {
-                    updatedData.push({
-                        recipeId: row.dataset.recipeId,
-                        amount: row.querySelector('.amount').textContent.trim(),
-                        unit: row.querySelector('.unit').textContent.trim()
-                    });
-                });
-
-                fetch('/recipes/update', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updatedData)
-                }).then(response => {
-                    if (!response.ok) alert('Ошибка при сохранении.');
-                });
-            }
-
-            function deleteDish(recipeId, row) {
-                fetch('/recipes/delete/' + recipeId, { method: 'POST' })
-                    .then(response => {
-                        if (response.ok) row.remove();
-                        else alert('Ошибка при удалении.');
-                    });
-            }
-
-            document.getElementById('edit-button')?.addEventListener('click', toggleEditMode);
-            document.querySelectorAll('.delete-btn').forEach(button => {
-                button.addEventListener('click', function () {
-                    deleteDish(this.closest('.recipe-row').dataset.recipeId, this.closest('.recipe-row'));
-                });
-            });
-
-            function showTab(type) {
-                document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
-                document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
-
-                let activeTab = document.getElementById(type);
-                if (activeTab) {
-                    activeTab.style.display = 'block';
-                    document.querySelector(`.tab-button[data-type="${type}"]`).classList.add('active');
-                }
-            }
-
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.addEventListener('click', function () {
-                    let type = this.getAttribute('data-type');
-                    showTab(type);
-                });
-            });
-
-            let firstTab = document.querySelector('.tab-button');
-            if (firstTab) {
-                showTab(firstTab.getAttribute('data-type'));
-            }
-
-            // Обработчик клика на блюдо для показа ингредиентов
-            document.querySelectorAll('.recipe-name').forEach(dish => {
-                dish.addEventListener('click', function () {
-                    let ingredientsTable = this.nextElementSibling;
-                    if (ingredientsTable.style.display === 'none' || ingredientsTable.style.display === '') {
-                        document.querySelectorAll('.recipe-name').forEach(ingredient => ingredient.nextElementSibling.style.display = 'none');
-                        ingredientsTable.style.display = 'table';
-
-                    } else {
-                        ingredientsTable.style.display = 'none';
-                    }
-                });
-            });
-        });
-    </script>
+    <style>
+        .name-and-table {
+            margin: 20px;
+        }
+        /* Стили для формы добавления ингредиентов */
+        .ingredient-add-form {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            display: none; /* по умолчанию скрыта */
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .ingredient-add-form label {
+            margin-right: 5px;
+        }
+        .ingredient-add-form select,
+        .ingredient-add-form input {
+            padding: 5px;
+            font-size: 14px;
+        }
+        .ingredient-add-form button {
+            padding: 5px 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        /* Если не в режиме редактирования, первые три колонки таблицы ингредиентов занимают 100% */
+        body:not(.edit-mode) table.menu-table col:nth-child(1) {
+            width: 33.33% !important;
+        }
+        body:not(.edit-mode) table.menu-table col:nth-child(2) {
+            width: 33.33% !important;
+        }
+        body:not(.edit-mode) table.menu-table col:nth-child(3) {
+            width: 33.33% !important;
+        }
+        /* По умолчанию таблицы ингредиентов скрыты */
+        .ingredients-table {
+            display: none;
+        }
+        /* Столбец действий – отображается только в режиме редактирования */
+        .actions-col,
+        .actions-column {
+            display: none;
+        }
+        .edit-mode .actions-col {
+            display: table-column;
+        }
+        .edit-mode .actions-column {
+            display: table-cell;
+        }
+    </style>
 </head>
 <body>
-
 <nav>
     <ul>
         <li><a href="/" class="home-button">Main Page</a></li>
         <li><a href="/menu">Menu</a></li>
         <li><a href="/recipes" class="active">Recipes</a></li>
+        <li><a href="/stock">Stock</a></li>
     </ul>
 </nav>
 
 <div class="container">
-    <h1>Recipes</h1>
-
+    <h1>Рецепты</h1>
+    <!-- Вкладки для категорий блюд -->
     <div class="tabs">
-        <button class="tab-button" th:each="type : ${menuTypes}" th:text="${type}" th:attr="data-type=${type}"></button>
+        <button class="tab-button" th:each="type : ${menuTypes}"
+                th:text="${type}"
+                th:attr="data-type=${type}"></button>
     </div>
 
     <div class="admin-actions" th:if="${isAdmin}">
         <button id="edit-button">Edit</button>
     </div>
 
+    <!-- Для каждого типа создаём отдельный блок с рецептами -->
     <div th:each="type : ${menuTypes}" th:id="${type}" class="tab-content" style="display: none;">
         <ul class="recipe-list">
             <li th:each="dishName : ${recipesByType.get(type)}" class="name-and-table">
+                <!-- Скрытое поле с menuId для данного блюда -->
+                <input type="hidden" class="menu-id" th:value="${dishMenuMap[dishName]}"/>
                 <span class="recipe-name" th:text="${dishName}" style="cursor: pointer; font-weight: bold;"></span>
 
                 <!-- Таблица ингредиентов (изначально скрыта) -->
-                <table class="ingredients-table">
+                <table class="ingredients-table menu-table">
                     <colgroup>
-                        <col style="width: 55%;"> <!-- Название блюда -->
-                        <col style="width: 15%;"> <!-- Описание -->
-                        <col style="width: 15%;"> <!-- Цена -->
-                        <col th:if="${isAdmin}" class="actions-column" style="width: 15%;"> <!-- Действия (если админ) -->
+                        <col style="width: 55%;">
+                        <col style="width: 15%;">
+                        <col style="width: 15%;">
+                        <col th:if="${isAdmin}" class="actions-col" style="width: 15%;">
                     </colgroup>
                     <thead>
                     <tr>
                         <th>Ингредиент</th>
                         <th>Количество</th>
                         <th>Ед. изм.</th>
+                        <th th:if="${isAdmin}" class="actions-column">Действия</th>
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="recipe : ${ingredientsByDish.get(dishName)}" class="recipe-row"
-                        th:attr="data-recipe-id=${recipe.recipeId}">
-                        <td class="item editable" th:text="${recipe.stock.item.itemName}"></td>
+                    <tr th:each="recipe : ${ingredientsByDish.get(dishName)}"
+                        class="recipe-row" th:attr="data-recipe-id=${recipe.recipeId}, data-menu-id=${recipe.menu.menuId}">
+                        <td class="item editable" th:text="${recipe.item.itemName}"></td>
                         <td class="amount editable" th:text="${recipe.amount}"></td>
                         <td class="unit editable" th:text="${recipe.unit}"></td>
                         <td th:if="${isAdmin}" class="actions-column">
                             <button class="delete-btn" style="display: none;">Delete</button>
                         </td>
                     </tr>
-                    <tr th:if="${ingredientsByDish.get(dishName) == null or #lists.isEmpty(ingredientsByDish.get(dishName))}">
+                    <tr th:if="${ingredientsByDish.get(dishName) == null or #lists.isEmpty(ingredientsByDish.get(dishName))}"
+                        class="no-ingredients">
                         <td colspan="3">Ингредиентов пока нет</td>
                     </tr>
                     </tbody>
                 </table>
+
+                <!-- Форма добавления ингредиента (только для администратора, по умолчанию скрыта) -->
+                <div class="ingredient-add-form" th:if="${isAdmin}">
+                    <label>Тип продукта:</label>
+                    <select class="ingredientProductTypeSelect">
+                        <option value="">Выберите тип продукта</option>
+                        <option th:each="pt : ${productTypes}" th:value="${pt}" th:text="${pt}"></option>
+                        <option value="Другое">Другое</option>
+                    </select>
+                    <input type="text" class="customIngredientProductType"
+                           placeholder="Введите новый тип продукта" disabled>
+                    <label>Продукт:</label>
+                    <select class="ingredientProductSelect">
+                        <option value="">Выберите продукт</option>
+                    </select>
+                    <label>Название продукта:</label>
+                    <input type="text" class="ingredientProductNameInput" placeholder="Введите название продукта">
+                    <label>Количество:</label>
+                    <input type="text" class="ingredientAmountInput" placeholder="Введите количество">
+                    <label>Ед. изм.:</label>
+                    <select class="ingredientUnitSelect"></select>
+                    <button class="addIngredientButton">Add</button>
+                </div>
             </li>
             <li th:if="${recipesByType.get(type) == null or #lists.isEmpty(recipesByType.get(type))}">
                 В этой категории пока нет блюд
             </li>
         </ul>
     </div>
+
+    <!-- JSON с данными для all_items для формы добавления (используем th:utext для неэкранированного вывода) -->
+    <script type="application/json" id="allItemsJson" th:utext="${allItemsJson}"></script>
 </div>
 
+<!-- Скрипты вынесены в конец документа -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        let isEditing = false;
+        const recipeUnits = ["kg", "g", "L", "ml", "tsp", "tbsp", "pcs"];
+
+        function toggleEditMode() {
+            isEditing = !isEditing;
+            document.querySelectorAll('.editable').forEach(cell => {
+                cell.contentEditable = isEditing ? "true" : "false";
+                cell.classList.toggle('editing', isEditing);
+            });
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.style.display = isEditing ? "inline-block" : "none";
+            });
+            document.getElementById('edit-button').textContent = isEditing ? "Save" : "Edit";
+            document.body.classList.toggle('edit-mode', isEditing);
+            if (!isEditing) {
+                saveChanges();
+            }
+        }
+
+        function saveChanges() {
+            let updatedData = [];
+            document.querySelectorAll('.recipe-row').forEach(row => {
+                updatedData.push({
+                    recipeId: row.dataset.recipeId,
+                    amount: row.querySelector('.amount').textContent.trim(),
+                    unit: row.querySelector('.unit').textContent.trim()
+                });
+            });
+            fetch('/recipes/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+            }).then(response => {
+                if (!response.ok) alert('Ошибка при сохранении.');
+            });
+        }
+
+        function deleteDish(recipeId, row) {
+            fetch('/recipes/delete/' + recipeId, { method: 'POST' })
+                .then(response => {
+                    if (response.ok) row.remove();
+                    else alert('Ошибка при удалении.');
+                });
+        }
+
+        document.getElementById('edit-button')?.addEventListener('click', toggleEditMode);
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                let recipeRow = this.closest('.recipe-row');
+                let recipeId = recipeRow.dataset.recipeId;
+                deleteDish(recipeId, recipeRow);
+            });
+        });
+
+        // Переключение вкладок
+        function showTab(type) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            let activeTab = document.getElementById(type);
+            if (activeTab) {
+                activeTab.style.display = 'block';
+                document.querySelector(`.tab-button[data-type="${type}"]`).classList.add('active');
+            }
+        }
+
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', function () {
+                let type = this.getAttribute('data-type');
+                showTab(type);
+            });
+        });
+
+        let firstTab = document.querySelector('.tab-button');
+        if (firstTab) {
+            showTab(firstTab.getAttribute('data-type'));
+        }
+
+        // Обработчик клика по названию блюда: переключает видимость таблицы ингредиентов и формы добавления
+        document.querySelectorAll('.recipe-name').forEach(function(dish) {
+            dish.addEventListener('click', function() {
+                console.log("Нажато: " + this.textContent);
+                let ingredientsTable = this.nextElementSibling; // таблица ингредиентов
+                if (!ingredientsTable) return;
+                let addForm = ingredientsTable.nextElementSibling; // форма добавления
+                if (ingredientsTable.style.display === 'none' || ingredientsTable.style.display === '') {
+                    ingredientsTable.style.display = 'table';
+                    if (addForm && addForm.classList.contains('ingredient-add-form')) {
+                        addForm.style.display = 'flex';
+                    }
+                } else {
+                    ingredientsTable.style.display = 'none';
+                    if (addForm && addForm.classList.contains('ingredient-add-form')) {
+                        addForm.style.display = 'none';
+                    }
+                }
+            });
+        });
+
+        // Для каждой формы добавления ингредиента
+        document.querySelectorAll('.ingredient-add-form').forEach(form => {
+            // Заполняем выпадающий список единиц измерения
+            let unitSelect = form.querySelector('.ingredientUnitSelect');
+            unitSelect.innerHTML = "";
+            recipeUnits.forEach(u => {
+                let option = document.createElement("option");
+                option.value = u;
+                option.textContent = u;
+                unitSelect.appendChild(option);
+            });
+
+            // Обработчик изменения типа продукта
+            let productTypeSelect = form.querySelector('.ingredientProductTypeSelect');
+            let customTypeInput = form.querySelector('.customIngredientProductType');
+            let productSelect = form.querySelector('.ingredientProductSelect');
+            productTypeSelect.addEventListener("change", function() {
+                let selectedType = this.value.trim();
+                console.log("Выбран тип продукта: " + selectedType);
+                productSelect.innerHTML = "";
+                if (selectedType === "Другое" || selectedType === "") {
+                    customTypeInput.disabled = (selectedType !== "Другое");
+                } else {
+                    customTypeInput.disabled = true;
+                    customTypeInput.value = "";
+                    // Получаем данные из JSON
+                    let items = [];
+                    try {
+                        let allItems = JSON.parse(document.getElementById("allItemsJson").textContent);
+                        items = allItems[selectedType] || [];
+                        console.log("Найдено продуктов для типа '" + selectedType + "': ", items);
+                    } catch(e) {
+                        console.error("Ошибка парсинга allItemsJson", e);
+                    }
+                    items.forEach(item => {
+                        let option = document.createElement("option");
+                        option.value = item.itemId;
+                        option.textContent = item.itemName;
+                        productSelect.appendChild(option);
+                    });
+                    // Если список пуст, можно добавить опцию "Нет доступных продуктов"
+                    if(items.length === 0) {
+                        let option = document.createElement("option");
+                        option.value = "";
+                        option.textContent = "Нет доступных продуктов";
+                        productSelect.appendChild(option);
+                    }
+                }
+            });
+
+            // Обработчик выбора продукта из выпадающего списка
+            let productSelectEl = form.querySelector('.ingredientProductSelect');
+            productSelectEl.addEventListener("change", function() {
+                let selectedOption = this.options[this.selectedIndex];
+                if(selectedOption && selectedOption.value !== "") {
+                    form.querySelector('.ingredientProductNameInput').value = selectedOption.textContent;
+                }
+            });
+        });
+
+        // Обработчик кнопок добавления ингредиента
+        // Обработчик кнопки добавления ингредиента
+        document.querySelectorAll('.addIngredientButton').forEach(btn => {
+            btn.addEventListener("click", function() {
+                let form = this.closest('.ingredient-add-form');
+                let recipeRow = this.closest('.name-and-table').querySelector('.recipe-row');  // Ищем .recipe-row в родительском элементе .name-and-table
+                let menuId = recipeRow ? recipeRow.dataset.menuId : null;  // Получаем menuId из .recipe-row
+
+                let selectedType = form.querySelector('.ingredientProductTypeSelect').value.trim();
+                let productType;
+                if (selectedType === "Другое") {
+                    productType = form.querySelector('.customIngredientProductType').value.trim();
+                    if (productType === "") {
+                        alert("Введите новый тип продукта");
+                        return;
+                    }
+                } else {
+                    productType = selectedType;
+                }
+                let productName = form.querySelector('.ingredientProductNameInput').value.trim();
+                if (productName === "") {
+                    alert("Введите название продукта");
+                    return;
+                }
+                let amount = form.querySelector('.ingredientAmountInput').value.trim();
+                if (amount === "") {
+                    alert("Введите количество");
+                    return;
+                }
+                let unit = form.querySelector('.ingredientUnitSelect').value;
+                let ingredientsTable = this.closest('.name-and-table').querySelector('.ingredients-table');
+                let existingRow = null;
+                if (ingredientsTable) {
+                    let rows = ingredientsTable.querySelectorAll("tr.recipe-row");
+                    rows.forEach(row => {
+                        let currentName = row.querySelector(".item").textContent.trim().toLowerCase();
+                        if (currentName === productName.toLowerCase()) {
+                            existingRow = row;
+                        }
+                    });
+                }
+                if (existingRow) {
+                    let amountCell = existingRow.querySelector(".amount");
+                    let currentAmount = parseFloat(amountCell.textContent.trim());
+                    let additional = parseFloat(amount);
+                    let newAmount = currentAmount + additional;
+                    amountCell.textContent = newAmount;
+                    let updatePayload = [{
+                        recipeId: existingRow.dataset.recipeId,
+                        amount: newAmount,
+                        unit: unit
+                    }];
+                    fetch('/recipes/update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updatePayload)
+                    }).then(response => {
+                        if (!response.ok) {
+                            alert("Ошибка при обновлении ингредиента");
+                        }
+                    });
+                } else {
+                    let payload = {
+                        menuId: menuId,
+                        productType: productType,
+                        itemName: productName,
+                        amount: amount,
+                        unit: unit
+                    };
+                    fetch('/recipes/ingredient/add', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error("Ошибка при добавлении ингредиента");
+                            }
+                            return response.json();
+                        })
+                        .then(addedIngredient => {
+                            let ingredientsTable = this.closest('.name-and-table').querySelector('.ingredients-table');
+                            if (!ingredientsTable) return;
+                            let tbody = ingredientsTable.querySelector("tbody");
+                            let noIngredientsRow = tbody.querySelector(".no-ingredients");
+                            if (noIngredientsRow) { noIngredientsRow.remove(); }
+                            let newRow = document.createElement("tr");
+                            newRow.className = "recipe-row";
+                            newRow.dataset.recipeId = addedIngredient.recipeId;
+                            newRow.innerHTML = `
+                    <td class="item editable">${addedIngredient.item.itemName}</td>
+                    <td class="amount editable">${addedIngredient.amount}</td>
+                    <td class="unit editable">${addedIngredient.unit}</td>
+                    <td class="actions-column">
+                      <button class="delete-btn" style="display: none;">Delete</button>
+                    </td>
+                  `;
+                            tbody.appendChild(newRow);
+                        })
+                        .catch(error => {
+                            alert(error.message);
+                        });
+                }
+                // Сброс полей формы
+                form.querySelector('.ingredientProductTypeSelect').value = "";
+                form.querySelector('.customIngredientProductType').value = "";
+                form.querySelector('.customIngredientProductType').disabled = true;
+                form.querySelector('.ingredientProductSelect').innerHTML = "<option value=''>Выберите продукт</option>";
+                form.querySelector('.ingredientProductNameInput').value = "";
+                form.querySelector('.ingredientAmountInput').value = "";
+                form.querySelector('.ingredientUnitSelect').selectedIndex = 0;
+            });
+        });
+
+    });
+</script>
 </body>
 </html>

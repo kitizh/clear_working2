@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Stock Management</title>
+    <!-- Подключаем стили из menu.css для единообразного оформления -->
+    <link rel="stylesheet" th:href="@{/css/menu.css}">
+    <style>
+        /* Дополнительные корректировки для страницы Stock */
+        .tab-content { margin-top: 20px; }
+        /* Скрываем столбец действий по умолчанию */
+        .actions-column { display: none; }
+        /* В режиме редактирования показываем столбец действий */
+        .edit-mode .actions-column { display: table-cell; }
+        /* Если не в режиме редактирования, первые три столбца занимают 100% ширины */
+        body:not(.edit-mode) table.menu-table col:nth-child(1) {
+            width: 33.33% !important;
+        }
+        body:not(.edit-mode) table.menu-table col:nth-child(2) {
+            width: 33.33% !important;
+        }
+        body:not(.edit-mode) table.menu-table col:nth-child(3) {
+            width: 33.33% !important;
+        }
+        body:not(.edit-mode) table.menu-table col:nth-child(4) {
+            width: 0 !important;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            let isEditing = false;
+
+            // Режим редактирования: включает возможность редактирования ячеек и показывает столбец действий
+            function toggleEditMode() {
+                isEditing = !isEditing;
+                document.querySelectorAll('.editable').forEach(cell => {
+                    cell.contentEditable = isEditing ? "true" : "false";
+                    cell.classList.toggle('editing', isEditing);
+                });
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.style.display = isEditing ? "inline-block" : "none";
+                });
+                document.getElementById('edit-button').textContent = isEditing ? "Save" : "Edit";
+                // Добавляем/удаляем класс edit-mode на body для управления видимостью столбца действий
+                document.body.classList.toggle('edit-mode', isEditing);
+                if (!isEditing) {
+                    saveChanges();
+                }
+            }
+
+            function saveChanges() {
+                let updatedStocks = [];
+                document.querySelectorAll('.stock-row').forEach(row => {
+                    updatedStocks.push({
+                        stockId: row.dataset.stockId,
+                        amount: row.querySelector('.amount').textContent.trim(),
+                        unit: row.querySelector('.unit').textContent.trim()
+                    });
+                });
+                fetch('/stock/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(updatedStocks)
+                }).then(response => {
+                    if (!response.ok) alert('Ошибка при сохранении изменений');
+                });
+            }
+
+            function deleteStock(stockId, row) {
+                fetch('/stock/delete/' + stockId, { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) row.remove();
+                        else alert('Ошибка при удалении');
+                    });
+            }
+
+            document.getElementById('edit-button')?.addEventListener('click', toggleEditMode);
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    let row = this.closest('.stock-row');
+                    deleteStock(row.dataset.stockId, row);
+                });
+            });
+
+            // Функция переключения вкладок
+            function showTab(type) {
+                document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                let activeTab = document.getElementById(type);
+                if (activeTab) {
+                    activeTab.style.display = 'block';
+                    document.querySelector(`.tab-button[data-type="${type}"]`)?.classList.add('active');
+                }
+            }
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    let type = this.getAttribute('data-type');
+                    showTab(type);
+                });
+            });
+
+            // Задаём список единиц измерения (например, "kg", "g", "l", "ml", "pcs")
+            const units = ["kg", "g", "l", "ml", "pcs"];
+            function populateUnitDropdown() {
+                let unitSelect = document.getElementById("unitSelect");
+                unitSelect.innerHTML = "";
+                units.forEach(u => {
+                    let option = document.createElement("option");
+                    option.value = u;
+                    option.textContent = u;
+                    unitSelect.appendChild(option);
+                });
+            }
+            populateUnitDropdown();
+
+            // Получаем карту всех продуктов по типам из скрытого элемента allItemsJson
+            let allItemsMap = {};
+            try {
+                allItemsMap = JSON.parse(document.getElementById("allItemsJson").textContent);
+            } catch(e) {
+                console.error("Ошибка парсинга allItemsJson", e);
+            }
+
+            // При выборе типа продукта в форме добавления заполняем выпадающий список продуктов
+            document.getElementById("productTypeSelect").addEventListener("change", function() {
+                let selectedType = this.value;
+                let productSelect = document.getElementById("productSelect");
+                productSelect.innerHTML = "";
+                if(selectedType === "Другое") {
+                    document.getElementById("customProductType").disabled = false;
+                } else {
+                    document.getElementById("customProductType").disabled = true;
+                    document.getElementById("customProductType").value = "";
+                    let items = allItemsMap[selectedType] || [];
+                    items.forEach(item => {
+                        let option = document.createElement("option");
+                        option.value = item.itemId;
+                        option.textContent = item.itemName;
+                        productSelect.appendChild(option);
+                    });
+                }
+            });
+
+            // При выборе продукта обновляем поле названия продукта
+            document.getElementById("productSelect").addEventListener("change", function() {
+                let selectedOption = this.options[this.selectedIndex];
+                if(selectedOption) {
+                    document.getElementById("productNameInput").value = selectedOption.textContent;
+                }
+            });
+
+            // Обработка добавления нового продукта в запас
+            document.getElementById("addStockButton").addEventListener("click", function() {
+                let productTypeSelect = document.getElementById("productTypeSelect");
+                let selectedType = productTypeSelect.value;
+                let productType;
+                if(selectedType === "Другое") {
+                    productType = document.getElementById("customProductType").value.trim();
+                    if(productType === "") {
+                        alert("Введите новый тип продукта");
+                        return;
+                    }
+                } else {
+                    productType = selectedType;
+                }
+                let productName = document.getElementById("productNameInput").value.trim();
+                if(productName === "") {
+                    alert("Введите название продукта");
+                    return;
+                }
+                let amount = document.getElementById("amountInput").value.trim();
+                if(amount === "") {
+                    alert("Введите количество");
+                    return;
+                }
+                let unit = document.getElementById("unitSelect").value;
+
+                // Пытаемся найти уже существующую строку для данного продукта в вкладке
+                let tabContent = document.getElementById(productType);
+                let existingRow = null;
+                if(tabContent) {
+                    let rows = tabContent.querySelectorAll("tr.stock-row");
+                    rows.forEach(row => {
+                        let currentName = row.querySelector(".product-name").textContent.trim().toLowerCase();
+                        if(currentName === productName.toLowerCase()){
+                            existingRow = row;
+                        }
+                    });
+                }
+
+                if(existingRow) {
+                    // Если продукт уже есть, обновляем количество
+                    let amountCell = existingRow.querySelector(".amount");
+                    let currentAmount = parseFloat(amountCell.textContent.trim());
+                    let additional = parseFloat(amount);
+                    let newAmount = currentAmount + additional;
+                    amountCell.textContent = newAmount;
+                    // Обновляем запись на сервере
+                    let updatePayload = [{
+                        stockId: existingRow.dataset.stockId,
+                        amount: newAmount,
+                        unit: unit
+                    }];
+                    fetch('/stock/update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updatePayload)
+                    }).then(response => {
+                        if(!response.ok) {
+                            alert("Ошибка при обновлении количества");
+                        }
+                    });
+                } else {
+                    // Если продукта нет, добавляем новую запись
+                    let payload = {
+                        productType: productType,
+                        itemName: productName,
+                        amount: amount,
+                        unit: unit
+                    };
+                    fetch('/stock/add', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    })
+                        .then(response => {
+                            if(!response.ok) {
+                                throw new Error("Ошибка при добавлении продукта");
+                            }
+                            return response.json();
+                        })
+                        .then(addedStock => {
+                            // Если вкладка для данного типа не существует, создаём её
+                            let tabContent = document.getElementById(productType);
+                            if(!tabContent) {
+                                let tabButton = document.createElement("button");
+                                tabButton.className = "tab-button";
+                                tabButton.setAttribute("data-type", productType);
+                                tabButton.textContent = productType;
+                                tabButton.addEventListener("click", function() {
+                                    showTab(productType);
+                                });
+                                document.querySelector(".tabs").appendChild(tabButton);
+
+                                tabContent = document.createElement("div");
+                                tabContent.id = productType;
+                                tabContent.className = "tab-content";
+                                tabContent.style.display = "none";
+                                let table = document.createElement("table");
+                                table.className = "menu-table";
+                                table.innerHTML = `
+                <colgroup>
+                  <col style="width: 40%;">
+                  <col style="width: 30%;">
+                  <col style="width: 30%;">
+                  <col style="width: 10%;">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Продукт</th>
+                    <th>Количество</th>
+                    <th>Ед. измерения</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              `;
+                                tabContent.appendChild(table);
+                                document.querySelector(".container").appendChild(tabContent);
+                            }
+                            let table = tabContent.querySelector("table.menu-table");
+                            let tbody = table.querySelector("tbody");
+                            let noProductsRow = tbody.querySelector(".no-products");
+                            if(noProductsRow) { noProductsRow.remove(); }
+                            let newRow = document.createElement("tr");
+                            newRow.className = "stock-row";
+                            newRow.dataset.stockId = addedStock.stockId;
+                            newRow.innerHTML = `
+              <td class="product-name editable">${addedStock.item.itemName}</td>
+              <td class="amount editable">${addedStock.amount}</td>
+              <td class="unit editable">${addedStock.unit}</td>
+              <td class="actions-column">
+                <button class="delete-btn" style="display: none;">Delete</button>
+              </td>
+            `;
+                            tbody.appendChild(newRow);
+                        })
+                        .catch(error => {
+                            alert(error.message);
+                        });
+                }
+                // Очищаем поля формы
+                productTypeSelect.value = "";
+                document.getElementById("customProductType").value = "";
+                document.getElementById("customProductType").disabled = true;
+                document.getElementById("productSelect").innerHTML = "";
+                document.getElementById("productNameInput").value = "";
+                document.getElementById("amountInput").value = "";
+                document.getElementById("unitSelect").selectedIndex = 0;
+            });
+
+            // При загрузке, если есть первая вкладка, показываем её
+            let firstTab = document.querySelector('.tab-button');
+            if (firstTab) {
+                showTab(firstTab.getAttribute('data-type'));
+            }
+        });
+    </script>
+</head>
+<body>
+<nav>
+    <ul>
+        <li><a href="/" class="home-button">Main Page</a></li>
+        <li><a href="/stock" class="active">Stock</a></li>
+        <li><a href="/menu">Menu</a></li>
+    </ul>
+</nav>
+<div class="container">
+    <h1>Stock Management</h1>
+    <!-- Вкладки для типов продуктов. Отображаются только если в категории есть хотя бы один продукт с amount > 0 -->
+    <div class="tabs">
+        <button class="tab-button"
+                th:each="type : ${productTypes}"
+                th:if="${stockItems.get(type)?.![amount > 0].contains(true)}"
+                th:text="${type}"
+                th:attr="data-type=${type}">
+        </button>
+    </div>
+    <!-- Кнопка Edit для администратора -->
+    <div class="admin-actions" th:if="${isAdmin}">
+        <button id="edit-button">Edit</button>
+    </div>
+    <!-- Форма добавления нового продукта (только для админа) -->
+    <div class="add-form" th:if="${isAdmin}">
+        <label for="productTypeSelect">Тип продукта:</label>
+        <select id="productTypeSelect">
+            <option th:each="type : ${productTypes}" th:value="${type}" th:text="${type}"></option>
+            <option value="Другое">Другое</option>
+        </select>
+        <input type="text" id="customProductType" placeholder="Введите новый тип продукта" disabled>
+        <label for="productSelect">Продукт:</label>
+        <select id="productSelect"></select>
+        <label for="productNameInput">Название продукта:</label>
+        <input type="text" id="productNameInput" placeholder="Введите название продукта">
+        <label for="amountInput">Количество:</label>
+        <input type="text" id="amountInput" placeholder="Введите количество">
+        <label for="unitSelect">Ед. измерения:</label>
+        <select id="unitSelect"></select>
+        <button id="addStockButton">Add</button>
+    </div>
+    <!-- Скрытый элемент с JSON представлением allItemsMap -->
+    <div id="allItemsJson" th:text="${allItemsJson}" style="display: none;"></div>
+    <!-- Содержимое вкладок с таблицами для каждого типа продукта. Отображаются только если в категории есть хотя бы один продукт с amount > 0 -->
+    <div th:each="type : ${productTypes}"
+         th:if="${stockItems.get(type)?.![amount > 0].contains(true)}"
+         th:id="${type}" class="tab-content" style="display: none;">
+        <table class="menu-table">
+            <colgroup>
+                <col style="width: 40%;">
+                <col style="width: 30%;">
+                <col style="width: 30%;">
+                <col style="width: 10%;">
+            </colgroup>
+            <thead>
+            <tr>
+                <th>Продукт</th>
+                <th>Количество</th>
+                <th>Ед. измерения</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="stock : ${stockItems.get(type)}" class="stock-row" th:attr="data-stock-id=${stock.stockId}">
+                <td class="product-name editable" th:text="${stock.item.itemName}"></td>
+                <td class="amount editable" th:text="${stock.amount}"></td>
+                <td class="unit editable" th:text="${stock.unit}"></td>
+                <td th:if="${isAdmin}" class="actions-column">
+                    <button class="delete-btn" style="display: none;">Delete</button>
+                </td>
+            </tr>
+            <tr th:if="${stockItems.get(type) == null or #lists.isEmpty(stockItems.get(type))}" class="no-products">
+                <td colspan="4">Продуктов в этой категории пока нет</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
