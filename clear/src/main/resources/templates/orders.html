@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Orders</title>
+    <link rel="stylesheet" th:href="@{/css/menu.css}">
+    <style>
+        /* Стили для таблиц */
+        .menu-table, .order-items-table {
+            width: 100% !important;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #FFF;
+        }
+        .menu-table th, .menu-table td,
+        .order-items-table th, .order-items-table td {
+            border: 2px solid #E8C8B8;
+            padding: 10px;
+            text-align: center;
+            word-wrap: break-word;
+        }
+        .menu-table th, .order-items-table th {
+            background-color: #F7E1D7;
+            color: #241918;
+            font-weight: bold;
+        }
+        /* Редактируемые ячейки */
+        .editable {
+            cursor: pointer;
+        }
+        .editing {
+            background-color: #e0f7fa;
+        }
+        /* Скрытие столбца действий вне режима редактирования */
+        .actions-column {
+            display: none;
+        }
+        body.edit-mode .actions-column {
+            display: table-cell;
+        }
+        /* Стили для формы добавления */
+        .add-form, .add-order-item-form {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .add-form label, .add-order-item-form label {
+            margin-right: 5px;
+        }
+        .add-form select, .add-form input,
+        .add-order-item-form select, .add-order-item-form input {
+            padding: 5px;
+            font-size: 14px;
+        }
+        .add-form button, .add-order-item-form button {
+            padding: 5px 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+    </style>
+
+    <!-- JSON с данными меню (передается из модели) -->
+    <script type="application/json" id="menuItemsJson" th:utext="${menuItemsJson}"></script>
+
+    <script>
+        // Функция форматирования даты
+        function formatDate(dateStr) {
+            let date = new Date(dateStr);
+            let day = ('0' + date.getDate()).slice(-2);
+            let month = ('0' + (date.getMonth() + 1)).slice(-2);
+            let year = date.getFullYear();
+            let hours = ('0' + date.getHours()).slice(-2);
+            let minutes = ('0' + date.getMinutes()).slice(-2);
+            return `${day}.${month}.${year} ${hours}:${minutes}`;
+        }
+
+        // Функция получения OrderItems для заданного заказа
+        function fetchOrderItems(orderId) {
+            document.getElementById("currentOrderId").textContent = orderId;
+            fetch(`/orders/${orderId}/items`)
+                .then(response => {
+                    if (!response.ok) throw new Error("Ошибка при получении элементов заказа");
+                    return response.json();
+                })
+                .then(items => {
+                    let tbody = document.querySelector("#orderItemsTbody");
+                    tbody.innerHTML = "";
+                    if (items.length === 0) {
+                        let noRow = document.createElement("tr");
+                        noRow.innerHTML = `<td colspan="4">Элементов для данного заказа нет</td>`;
+                        tbody.appendChild(noRow);
+                    } else {
+                        items.forEach(item => {
+                            let row = document.createElement("tr");
+                            row.innerHTML = `
+                            <td>${item.dishName}</td>
+                            <td>${item.price}</td>
+                            <td>${item.description}</td>
+                            <td class="actions-column">
+                                <button class="delete-item-btn" style="display: none;">Delete</button>
+                            </td>
+                        `;
+                            row.querySelector('.delete-item-btn').addEventListener('click', function () {
+                                let currentOrderId = document.getElementById("currentOrderId").textContent.trim();
+                                fetch(`/orders/${currentOrderId}/items/delete/${item.orderItemId}`, { method: 'POST' })
+                                    .then(response => {
+                                        if (response.ok) row.remove();
+                                        else alert("Ошибка при удалении элемента заказа");
+                                    });
+                            });
+                            tbody.appendChild(row);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    alert(error.message);
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            let isEditing = false;
+
+            function toggleEditMode() {
+                isEditing = !isEditing;
+                document.querySelectorAll('.editable').forEach(cell => {
+                    cell.contentEditable = isEditing ? "true" : "false";
+                    cell.classList.toggle('editing', isEditing);
+                });
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.style.display = isEditing ? "inline-block" : "none";
+                });
+                document.getElementById('edit-button').textContent = isEditing ? "Save" : "Edit";
+                document.body.classList.toggle('edit-mode', isEditing);
+
+                if (!isEditing) {
+                    saveChanges();
+                }
+            }
+
+            function saveChanges() {
+                let updatedData = [];
+                document.querySelectorAll('.menu-row').forEach(row => {
+                    updatedData.push({
+                        orderId: row.dataset.orderId,
+                        tableNumber: row.querySelector('.table-number').textContent.trim(),
+                        totalAmount: row.querySelector('.total-amount').textContent.trim(),
+                        status: row.querySelector('.status').textContent.trim(),
+                        description: row.querySelector('.description').textContent.trim()
+                    });
+                });
+
+                fetch('/orders/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedData)
+                }).then(response => {
+                    if (!response.ok) alert('Ошибка при сохранении.');
+                });
+            }
+
+            function deleteOrder(orderId, row) {
+                fetch('/orders/delete/' + orderId, { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) row.remove();
+                        else alert('Ошибка при удалении заказа.');
+                    });
+            }
+
+            document.getElementById('edit-button')?.addEventListener('click', toggleEditMode);
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    deleteOrder(this.closest('.menu-row').dataset.orderId, this.closest('.menu-row'));
+                });
+            });
+
+            // При клике по order-id обновляем таблицу OrderItems
+            document.querySelectorAll('.order-id').forEach(cell => {
+                cell.addEventListener('click', function () {
+                    let orderId = this.textContent.trim();
+                    fetchOrderItems(orderId);
+                });
+            });
+
+            // Функция добавления нового заказа через AJAX
+            document.getElementById("addOrderButton")?.addEventListener("click", function () {
+                let tableSelect = document.getElementById("tableSelect");
+                let descriptionInput = document.getElementById("orderDescription");
+                let tableId = tableSelect.value;
+                let description = descriptionInput.value.trim();
+                if (description === "") {
+                    alert("Введите описание заказа");
+                    return;
+                }
+                let newOrder = { tableId: tableId, description: description };
+                fetch('/orders/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newOrder)
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка при добавлении заказа');
+                        return response.json();
+                    })
+                    .then(addedOrder => {
+                        let tbody = document.querySelector("table.menu-table tbody");
+                        let noOrdersRow = tbody.querySelector(".no-orders");
+                        if (noOrdersRow) { noOrdersRow.remove(); }
+                        let newRow = document.createElement("tr");
+                        newRow.className = "menu-row";
+                        newRow.dataset.orderId = addedOrder.orderId;
+                        newRow.innerHTML = `
+                    <td class="order-id editable">${addedOrder.orderId}</td>
+                    <td>${formatDate(addedOrder.orderTime)}</td>
+                    <td class="table-number editable">${addedOrder.allTables != null ? addedOrder.allTables.id : 'N/A'}</td>
+                    <td class="total-amount editable">${addedOrder.totalAmount}</td>
+                    <td class="status editable">${addedOrder.status}</td>
+                    <td class="description editable">${addedOrder.description}</td>
+                    <td class="actions-column">
+                        <button class="delete-btn" style="display: none;">Delete</button>
+                    </td>
+                `;
+                        tbody.appendChild(newRow);
+                        descriptionInput.value = "";
+                        tableSelect.selectedIndex = 0;
+                        fetchOrderItems(addedOrder.orderId);
+                    })
+                    .catch(error => alert(error.message));
+            });
+
+            // При загрузке страницы отображаем OrderItems для последнего заказа (если он есть)
+            let orderRows = document.querySelectorAll('.menu-row');
+            if (orderRows.length > 0) {
+                let lastRow = orderRows[orderRows.length - 1];
+                let lastOrderId = lastRow.dataset.orderId;
+                fetchOrderItems(lastOrderId);
+            }
+
+            // Логика для формы добавления нового OrderItem:
+            let menuItemsData = JSON.parse(document.getElementById("menuItemsJson").textContent);
+
+            document.getElementById("dishTypeSelect")?.addEventListener("change", function() {
+                let selectedType = this.value;
+                let dishSelect = document.getElementById("dishSelect");
+                dishSelect.innerHTML = "<option value=''>Выберите блюдо</option>";
+                if (selectedType && menuItemsData[selectedType]) {
+                    menuItemsData[selectedType].forEach(function(dish) {
+                        let option = document.createElement("option");
+                        option.value = dish.menuId;
+                        option.textContent = dish.dishName;
+                        dishSelect.appendChild(option);
+                    });
+                }
+            });
+
+            document.getElementById("addOrderItemButton")?.addEventListener("click", function() {
+                let currentOrderId = document.getElementById("currentOrderId").textContent.trim();
+                if (!currentOrderId) {
+                    alert("Сначала выберите заказ");
+                    return;
+                }
+                let dishSelect = document.getElementById("dishSelect");
+                let selectedDishId = dishSelect.value;
+                if (!selectedDishId) {
+                    alert("Выберите блюдо");
+                    return;
+                }
+                let description = document.getElementById("orderItemDescription").value.trim();
+                if (description === "") description = "-";
+                let newItem = { menuId: selectedDishId, description: description };
+                fetch(`/orders/${currentOrderId}/items/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newItem)
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка при добавлении элемента заказа');
+                        return response.json();
+                    })
+                    .then(addedItem => {
+                        fetchOrderItems(currentOrderId);
+                        document.getElementById("dishTypeSelect").value = "";
+                        document.getElementById("dishSelect").innerHTML = "<option value=''>Выберите блюдо</option>";
+                        document.getElementById("orderItemDescription").value = "-";
+                    })
+                    .catch(error => alert(error.message));
+            });
+        });
+    </script>
+</head>
+<body>
+<nav>
+    <ul>
+        <li><a href="/" class="home-button">Main Page</a></li>
+        <li><a href="/menu">Menu</a></li>
+        <li><a href="/recipes">Recipes</a></li>
+        <li><a href="/stock">Stock</a></li>
+        <li><a href="/orders" class="active">Orders</a></li>
+    </ul>
+</nav>
+
+<div class="container">
+    <h1>Orders</h1>
+
+    <!-- Форма добавления нового заказа -->
+    <div class="add-form">
+        <label for="tableSelect">Столик:</label>
+        <select id="tableSelect" name="tableId">
+            <option th:each="table : ${tables}"
+                    th:value="${table.id}"
+                    th:text="${table.id + ' (мест: ' + table.seats + ')'}">
+            </option>
+        </select>
+        <label for="orderDescription">Описание заказа:</label>
+        <input type="text" id="orderDescription" placeholder="Введите описание заказа">
+        <button id="addOrderButton">Add</button>
+    </div>
+
+    <div class="admin-actions">
+        <button id="edit-button">Edit</button>
+    </div>
+
+    <!-- Блок для отображения OrderItems -->
+    <div class="order-items-container">
+        <h2>Order Items for Order <span id="currentOrderId"></span></h2>
+
+        <!-- Форма добавления нового OrderItem -->
+        <div class="add-order-item-form">
+            <label for="dishTypeSelect">Тип блюда:</label>
+            <select id="dishTypeSelect">
+                <option value="">Выберите тип блюда</option>
+                <option th:each="type : ${menuTypes}" th:value="${type}" th:text="${type}"></option>
+            </select>
+            <label for="dishSelect">Блюдо:</label>
+            <select id="dishSelect">
+                <option value="">Выберите блюдо</option>
+            </select>
+            <label for="orderItemDescription">Описание:</label>
+            <input type="text" id="orderItemDescription" placeholder="Введите описание (необязательно)" value="-">
+            <button id="addOrderItemButton">Add Order Item</button>
+        </div>
+
+        <!-- Таблица OrderItems -->
+        <table class="order-items-table" id="orderItemsTable">
+            <colgroup>
+                <col style="width: 40%;">
+                <col style="width: 20%;">
+                <col style="width: 30%;">
+                <col style="width: 10%;">
+            </colgroup>
+            <thead>
+            <tr>
+                <th>Название блюда</th>
+                <th>Цена</th>
+                <th>Описание</th>
+                <th class="actions-column">Действия</th>
+            </tr>
+            </thead>
+            <tbody id="orderItemsTbody">
+            <tr class="no-order-items">
+                <td colspan="4">Элементов для данного заказа нет</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Таблица заказов -->
+    <table class="menu-table">
+        <colgroup>
+            <col style="width: 10%;">
+            <col style="width: 20%;">
+            <col style="width: 15%;">
+            <col style="width: 15%;">
+            <col style="width: 15%;">
+            <col style="width: 20%;">
+            <col style="width: 5%;">
+        </colgroup>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Время заказа</th>
+            <th>Столик</th>
+            <th>Сумма</th>
+            <th>Статус</th>
+            <th>Описание</th>
+            <th class="actions-column">Действия</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="order : ${orders}" class="menu-row" th:attr="data-order-id=${order.orderId}">
+            <td class="order-id editable" th:text="${order.orderId}"></td>
+            <td th:text="${#temporals.format(order.orderTime, 'dd.MM.yyyy HH:mm')}"></td>
+            <td class="table-number editable" th:text="${order.allTables != null ? order.allTables.id : 'N/A'}"></td>
+            <td class="total-amount editable" th:text="${order.totalAmount}"></td>
+            <td class="status editable" th:text="${order.status}"></td>
+            <td class="description editable" th:text="${order.description}"></td>
+            <td class="actions-column">
+                <button class="delete-btn" style="display: none;">Delete</button>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(orders)}" class="no-orders">
+            <td colspan="7">Заказов пока нет</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>

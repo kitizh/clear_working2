@@ -296,3 +296,97 @@ body.edit-mode th.actions-column {
     display: table-cell !important;
 }
 
+/* ======================= Общие стили (уже присутствуют в menu.css) ======================= */
+/* Пример: body, .container, h1, nav и т.д. */
+
+/* ======================= Стили для таблицы заказов ======================= */
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    background-color: #FFF;
+}
+
+.orders-table th,
+.orders-table td {
+    border: 2px solid #E8C8B8;
+    padding: 10px;
+    text-align: center;
+    word-wrap: break-word;
+}
+
+.orders-table th {
+    background-color: #F7E1D7;
+    color: #241918;
+    font-weight: bold;
+}
+
+/* Фиксированная ширина столбцов для таблицы заказов */
+.orders-table colgroup col:nth-child(1) { width: 10%; }
+.orders-table colgroup col:nth-child(2) { width: 20%; }
+.orders-table colgroup col:nth-child(3) { width: 15%; }
+.orders-table colgroup col:nth-child(4) { width: 15%; }
+.orders-table colgroup col:nth-child(5) { width: 15%; }
+.orders-table colgroup col:nth-child(6) { width: 20%; }
+.orders-table colgroup col:nth-child(7) { width: 5%; }
+
+/* ======================= Стили для редактируемых ячеек ======================= */
+.editable {
+    cursor: pointer;
+}
+.editing {
+    background-color: #e0f7fa;
+}
+
+/* Скрытие столбца действий вне режима редактирования */
+.actions-column {
+    display: none;
+}
+body.edit-mode .actions-column {
+    display: table-cell;
+}
+
+/* ======================= Стили для формы добавления заказа ======================= */
+.add-form {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.add-form label {
+    margin-right: 5px;
+}
+.add-form select,
+.add-form input {
+    padding: 5px;
+    font-size: 14px;
+}
+.add-form button {
+    padding: 5px 10px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* ======================= Стили для блока админ-опций ======================= */
+.admin-actions {
+    text-align: center;
+    margin-top: 30px;
+    margin-bottom: 20px;
+}
+.admin-actions button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s, transform 0.2s;
+}
+.admin-actions button:hover {
+    background-color: #45a049;
+    transform: scale(1.05);
+}
