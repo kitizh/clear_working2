@@ -5,6 +5,7 @@ import com.restaurant.entities.Stock;
 import com.restaurant.entities.AllItems;
 import com.restaurant.repositories.StockRepository;
 import com.restaurant.repositories.AllItemsRepository;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -13,6 +14,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.security.core.Authentication;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/stock")
@@ -29,7 +35,7 @@ public class StockController {
     }
 
     @GetMapping
-    public String getStock(Model model) throws Exception {
+    public String getStock(Model model, Authentication authentication) throws Exception {
         // Получаем все продукты из таблицы all_items
         List<AllItems> allItems = allItemsRepository.findAll();
         // Получаем список уникальных типов продуктов
@@ -59,9 +65,11 @@ public class StockController {
         // Передаём карту allItemsMap как JSON для JS
         model.addAttribute("allItemsJson", objectMapper.writeValueAsString(allItemsMap));
 
-        // Определяем, является ли пользователь администратором
-        // (пример – замените на свою логику; здесь для демонстрации всегда true)
-        model.addAttribute("isAdmin", true);
+        boolean isAdmin = authentication != null && authentication.getAuthorities()
+                .stream()
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+
+        model.addAttribute("isAdmin", isAdmin);
 
         return "stock";
     }

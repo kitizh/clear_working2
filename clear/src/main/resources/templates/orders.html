@@ -197,7 +197,7 @@
                     alert("Введите описание заказа");
                     return;
                 }
-                let newOrder = { tableId: tableId, description: description };
+                let newOrder = { allTables: tableId, description: description };
                 fetch('/orders/add', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -242,7 +242,7 @@
             }
 
             // Логика для формы добавления нового OrderItem:
-            let menuItemsData = JSON.parse(document.getElementById("menuItemsJson").textContent);
+            let menuItemsData = JSON.parse(document.getElementById("allDishes").textContent);
 
             document.getElementById("dishTypeSelect")?.addEventListener("change", function() {
                 let selectedType = this.value;
@@ -296,11 +296,12 @@
 <body>
 <nav>
     <ul>
-        <li><a href="/" class="home-button">Main Page</a></li>
-        <li><a href="/menu">Menu</a></li>
-        <li><a href="/recipes">Recipes</a></li>
-        <li><a href="/stock">Stock</a></li>
-        <li><a href="/orders" class="active">Orders</a></li>
+        <li><a href="/" class="home-button">Главная</a></li>
+        <li><a href="/menu">Меню</a></li>
+        <li><a href="/reserve">Брони</a></li>
+        <li><a href="/recipes" th:if="${isAdmin}">Рецепты</a></li>
+        <li><a href="/stock" th:if="${isAdmin}">Склад</a></li>
+        <li><a href="/orders" class="active" th:if="${isAdmin}">Заказы</a></li>
     </ul>
 </nav>
 
@@ -311,7 +312,7 @@
     <div class="add-form">
         <label for="tableSelect">Столик:</label>
         <select id="tableSelect" name="tableId">
-            <option th:each="table : ${tables}"
+            <option th:each="table : ${allTables}"
                     th:value="${table.id}"
                     th:text="${table.id + ' (мест: ' + table.seats + ')'}">
             </option>
@@ -344,6 +345,8 @@
             <input type="text" id="orderItemDescription" placeholder="Введите описание (необязательно)" value="-">
             <button id="addOrderItemButton">Add Order Item</button>
         </div>
+
+        <div id="allDishes" th:text="${allDishes}" style="display: none;"></div>
 
         <!-- Таблица OrderItems -->
         <table class="order-items-table" id="orderItemsTable">

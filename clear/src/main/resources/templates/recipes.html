@@ -63,10 +63,12 @@
 <body>
 <nav>
     <ul>
-        <li><a href="/" class="home-button">Main Page</a></li>
-        <li><a href="/menu">Menu</a></li>
-        <li><a href="/recipes" class="active">Recipes</a></li>
-        <li><a href="/stock">Stock</a></li>
+        <li><a href="/" class="home-button">Главная</a></li>
+        <li><a href="/menu">Меню</a></li>
+        <li><a href="/reserve">Брони</a></li>
+        <li><a href="/recipes" class="active" th:if="${isAdmin}">Рецепты</a></li>
+        <li><a href="/stock" th:if="${isAdmin}">Склад</a></li>
+        <li><a href="/orders" th:if="${isAdmin}">Заказы</a></li>
     </ul>
 </nav>
 

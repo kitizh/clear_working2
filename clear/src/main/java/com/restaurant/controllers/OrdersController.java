@@ -1,38 +1,71 @@
 package com.restaurant.controllers;
 
-import com.restaurant.entities.AllTables;
-import com.restaurant.entities.OrderItem;
-import com.restaurant.entities.Orders;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.restaurant.entities.*;
 import com.restaurant.repositories.AllTablesRepository;
+import com.restaurant.repositories.MenuRepository;
 import com.restaurant.repositories.OrderItemRepository;
 import com.restaurant.repositories.OrdersRepository;
+import org.aspectj.weaver.ast.Or;
+import org.hibernate.query.Order;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 
 @Controller
 @RequestMapping("/orders")
 public class OrdersController {
     private final OrdersRepository ordersRepository;
     private final AllTablesRepository allTablesRepository;
-    private final OrderItemRepository orderItemRepository;
+    private final MenuRepository menuRepository;
+    private final ObjectMapper objectMapper;
 
-    public OrdersController(OrdersRepository ordersRepository, AllTablesRepository allTablesRepository, OrderItemRepository orderItemRepository) {
+    public OrdersController(OrdersRepository ordersRepository, AllTablesRepository allTablesRepository, MenuRepository menuRepository, ObjectMapper objectMapper) {
         this.ordersRepository = ordersRepository;
         this.allTablesRepository = allTablesRepository;
-        this.orderItemRepository = orderItemRepository;
+        this.menuRepository = menuRepository;
+        this.objectMapper = objectMapper;
     }
 
     @GetMapping
-    public String showOrders(Model model) {
+    public String showOrders(Model model, Authentication authentication) throws Exception {
+
+        List<String> menuTypes = menuRepository.findAll().stream()
+                .map(Menu::getMenuType)
+                .distinct()
+                .toList();
+
+        Map<String, List<Menu>> menuItems = new HashMap<>();
+        for (String type : menuTypes) {
+            List<Menu> dishes = menuRepository.findByMenuType(type);
+            menuItems.put(type, dishes);
+        }
+        System.out.println("-----");
+        System.out.println(objectMapper.writeValueAsString(menuItems));
+        System.out.println("-----");
+        model.addAttribute("allDishes", objectMapper.writeValueAsString(menuItems));
         List<Orders> orders = ordersRepository.findAll();
+        List<AllTables> allTables = allTablesRepository.findAll();
         model.addAttribute("orders", orders);
+        model.addAttribute("allTables", allTables);
+        model.addAttribute("menuTypes", menuTypes);
+        boolean isAdmin = authentication != null && authentication.getAuthorities()
+                .stream()
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+
+        model.addAttribute("isAdmin", isAdmin);
+        model.addAttribute("menuItems", menuItems);
+
         return "orders";
     }
 
@@ -56,6 +89,29 @@ public class OrdersController {
             ordersRepository.save(order);
         }
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/add")
+    @ResponseBody
+    public ResponseEntity<Orders> addOrder(@RequestBody Map<String, String> payload) {
+        // Если описание не указано, задаем дефолтное значение
+        Orders newOrder = new Orders();
+        Integer tableId = Integer.parseInt(payload.get("allTables"));
+        String description = payload.get("description");
+        if (description == null || description.isEmpty()) {
+            newOrder.setDescription("-");
+        } else {
+            newOrder.setDescription(description);
+        }
+        AllTables table = allTablesRepository.findById(tableId).orElse(null);
+        newOrder.setAllTables(table);
+        newOrder.setTotalAmount(newOrder.getTotalAmount());
+        newOrder.setStatus("Принят");
+        // Устанавливаем цену по умолчанию равной 0
+        // Сохраняем новое блюдо в БД
+        Orders savedOrder = ordersRepository.save(newOrder);
+
+        return ResponseEntity.ok(savedOrder);
     }
 
 
