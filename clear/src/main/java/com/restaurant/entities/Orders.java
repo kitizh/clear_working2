@@ -1,7 +1,8 @@
 package com.restaurant.entities;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "orders")
@@ -11,13 +12,14 @@ public class Orders {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long orderId;
 
-    // В БД это TIMESTAMP с DEFAULT CURRENT_TIMESTAMP
-    // Для хранения в Java можно использовать LocalDateTime или Date.
+    // В БД это DATE и TIME
+    @Column(name = "order_date")
+    private LocalDate orderDate;
+
     @Column(name = "order_time")
-    private LocalDateTime orderTime;
+    private LocalTime orderTime;
 
     // Связь с таблицей all_tables по столбцу table_number.
-    // "ON DELETE SET NULL" означает, что если столик удалят, в orders будет null.
     @ManyToOne
     @JoinColumn(name = "table_number")
     private AllTables allTables;
@@ -29,6 +31,7 @@ public class Orders {
     public Orders() {
     }
 
+    // Геттеры и сеттеры
     public Long getOrderId() {
         return orderId;
     }
@@ -37,11 +40,19 @@ public class Orders {
         this.orderId = orderId;
     }
 
-    public LocalDateTime getOrderTime() {
+    public LocalDate getOrderDate() {
+        return orderDate;
+    }
+
+    public void setOrderDate(LocalDate orderDate) {
+        this.orderDate = orderDate;
+    }
+
+    public LocalTime getOrderTime() {
         return orderTime;
     }
 
-    public void setOrderTime(LocalDateTime orderTime) {
+    public void setOrderTime(LocalTime orderTime) {
         this.orderTime = orderTime;
     }
 

@@ -16,7 +16,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.*;
 
 @Controller
@@ -83,7 +84,8 @@ public class ReservationsController {
      * (Для неавторизованных) Создание новой брони (POST /reserve/new).
      * Принимаем:
      *  - tableId
-     *  - reservationTime (строка в ISO-формате, например "2025-03-10T15:30:00")
+     *  - reservationDate (строка в формате "yyyy-MM-dd")
+     *  - reservationTime (строка в формате "HH:mm:ss")
      *  - name
      *  - phone
      *  - services[] (список Long ID услуг)
@@ -93,24 +95,28 @@ public class ReservationsController {
     public ResponseEntity<?> createReservation(@RequestBody Map<String, Object> payload) {
         try {
             Integer tableId = Integer.valueOf(payload.get("tableId").toString());
+            String reservationDateStr = payload.get("reservationDate").toString();
             String reservationTimeStr = payload.get("reservationTime").toString();
             String name = payload.get("name").toString();
             String phone = payload.get("phone").toString();
 
-            // Получаем выбранные ID услуг (это может быть массив Long)
-            List<Integer> serviceIds = (List<Integer>) payload.get("services");
-
+            // Получаем выбранный столик
             AllTables table = allTablesRepository.findById(tableId)
                     .orElseThrow(() -> new IllegalArgumentException("Invalid table ID"));
 
+            // Создаем объект Reservation и устанавливаем столик
             Reservation reservation = new Reservation();
-            reservation.setReservationTime(LocalDateTime.parse(reservationTimeStr));
+            reservation.setReservationDate(LocalDate.parse(reservationDateStr));
+            reservation.setReservationTime(LocalTime.parse(reservationTimeStr));
             reservation.setName(name);
             reservation.setPhoneNumber(phone);
+            reservation.setTable(table);
+
             // Сохраняем бронь
             Reservation savedRes = reservationRepository.save(reservation);
 
-            // Создаём записи ReservedService
+            // Добавляем услуги (если они были выбраны)
+            List<Integer> serviceIds = (List<Integer>) payload.get("services");
             if (serviceIds != null) {
                 for (Integer sid : serviceIds) {
                     Service srv = serviceRepository.findById(sid.longValue())
@@ -122,16 +128,6 @@ public class ReservationsController {
                 }
             }
 
-            // Для таблиц — аналогичная логика, если нужно (но в задаче вы упомянули только услуги).
-            // Если вы хотите, чтобы reservation и стол тоже связывались через ReservedTable,
-            // нужно аналогично добавить сущность ReservedTable.
-            // Но в данном примере предположим, что стол хранится только в Reservation
-            // (либо добавьте поле "AllTables" в класс Reservation).
-            // В исходном коде вы уже показывали, что есть bridge-сущность ReservedTable.
-            // Тогда убирать setAllTables(...) было бы логично,
-            // но раз тут речь о простоте — в демо можно просто хранить ID стола в Reservation.
-
-            // Возвращаем краткую инфу о созданной брони
             Map<String, Object> result = new HashMap<>();
             result.put("reservationId", savedRes.getId());
             result.put("message", "Reservation created successfully!");
@@ -142,6 +138,10 @@ public class ReservationsController {
         }
     }
 
+
+
+
+
     /**
      * Возврат списка услуг (ReservedService) для конкретной брони
      */
@@ -151,7 +151,6 @@ public class ReservationsController {
         Reservation reservation = reservationRepository.findById(resId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid reservation ID"));
 
-        // Собираем данные об услугах
         List<ReservedService> rsList = reservedServiceRepository.findByReservation_Id(resId);
         List<Map<String, Object>> result = new ArrayList<>();
         for (ReservedService rs : rsList) {
@@ -207,7 +206,8 @@ public class ReservationsController {
 
     /**
      * Редактирование (inline) списка бронирований.
-     * Принимает массив [{ "id": 1, "reservationTime": "...", "name": "...", "phoneNumber": "..."}, ...]
+     * Принимает массив объектов:
+     * [{ "id": 1, "reservationDate": "yyyy-MM-dd", "reservationTime": "HH:mm:ss", "name": "...", "phoneNumber": "..." }, ...]
      */
     @PostMapping("/update")
     @ResponseBody
@@ -217,7 +217,10 @@ public class ReservationsController {
             Reservation reservation = reservationRepository.findById(rId)
                     .orElseThrow(() -> new IllegalArgumentException("Invalid reservation ID: " + rId));
 
-            reservation.setReservationTime(LocalDateTime.parse(item.get("reservationTime")));
+            String reservationDateStr = item.get("reservationDate");
+            String reservationTimeStr = item.get("reservationTime");
+            reservation.setReservationDate(LocalDate.parse(reservationDateStr));
+            reservation.setReservationTime(LocalTime.parse(reservationTimeStr));
             reservation.setName(item.get("name"));
             reservation.setPhoneNumber(item.get("phoneNumber"));
             reservationRepository.save(reservation);

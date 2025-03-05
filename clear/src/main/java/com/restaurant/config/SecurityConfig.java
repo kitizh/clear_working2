@@ -18,7 +18,7 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login", "/css/**", "/images/**", "/js/**", "/menu", "/reserve").permitAll()  // Доступ к статическим ресурсам без авторизации
+                        .requestMatchers("/login", "/css/**", "/images/**", "/js/**", "/menu", "/reserve/**").permitAll()  // Доступ к статическим ресурсам без авторизации
                         .requestMatchers("/admin/**").hasRole("ADMIN") // Админские страницы
                         .requestMatchers("/recipes").hasRole("ADMIN") // Доступ к рецептам только для админов
                         .anyRequest().authenticated()

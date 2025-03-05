@@ -68,7 +68,7 @@
     <script type="application/json" id="menuItemsJson" th:utext="${menuItemsJson}"></script>
 
     <script>
-        // Функция форматирования даты
+        // Функция форматирования даты (ожидает строку вида "yyyy-MM-ddTHH:mm:ss")
         function formatDate(dateStr) {
             let date = new Date(dateStr);
             let day = ('0' + date.getDate()).slice(-2);
@@ -98,13 +98,13 @@
                         items.forEach(item => {
                             let row = document.createElement("tr");
                             row.innerHTML = `
-                            <td>${item.dishName}</td>
-                            <td>${item.price}</td>
-                            <td>${item.description}</td>
-                            <td class="actions-column">
-                                <button class="delete-item-btn" style="display: none;">Delete</button>
-                            </td>
-                        `;
+                                <td>${item.dishName}</td>
+                                <td>${item.price}</td>
+                                <td>${item.description}</td>
+                                <td class="actions-column">
+                                    <button class="delete-item-btn" style="display: none;">Delete</button>
+                                </td>
+                            `;
                             row.querySelector('.delete-item-btn').addEventListener('click', function () {
                                 let currentOrderId = document.getElementById("currentOrderId").textContent.trim();
                                 fetch(`/orders/${currentOrderId}/items/delete/${item.orderItemId}`, { method: 'POST' })
@@ -187,17 +187,30 @@
                 });
             });
 
-            // Функция добавления нового заказа через AJAX
+            // Форма добавления нового заказа через AJAX
             document.getElementById("addOrderButton")?.addEventListener("click", function () {
                 let tableSelect = document.getElementById("tableSelect");
+                let orderDateInput = document.getElementById("orderDate");
+                let orderTimeInput = document.getElementById("orderTime");
                 let descriptionInput = document.getElementById("orderDescription");
                 let tableId = tableSelect.value;
+                let orderDate = orderDateInput.value;
+                let orderTime = orderTimeInput.value;
                 let description = descriptionInput.value.trim();
+                if (!orderDate || !orderTime) {
+                    alert("Введите дату и время заказа");
+                    return;
+                }
                 if (description === "") {
                     alert("Введите описание заказа");
                     return;
                 }
-                let newOrder = { allTables: tableId, description: description };
+                let newOrder = {
+                    allTables: tableId,
+                    description: description,
+                    orderDate: orderDate,
+                    orderTime: orderTime
+                };
                 fetch('/orders/add', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -215,19 +228,21 @@
                         newRow.className = "menu-row";
                         newRow.dataset.orderId = addedOrder.orderId;
                         newRow.innerHTML = `
-                    <td class="order-id editable">${addedOrder.orderId}</td>
-                    <td>${formatDate(addedOrder.orderTime)}</td>
-                    <td class="table-number editable">${addedOrder.allTables != null ? addedOrder.allTables.id : 'N/A'}</td>
-                    <td class="total-amount editable">${addedOrder.totalAmount}</td>
-                    <td class="status editable">${addedOrder.status}</td>
-                    <td class="description editable">${addedOrder.description}</td>
-                    <td class="actions-column">
-                        <button class="delete-btn" style="display: none;">Delete</button>
-                    </td>
-                `;
+                            <td class="order-id editable">${addedOrder.orderId}</td>
+                            <td>${formatDate(addedOrder.orderDate + 'T' + addedOrder.orderTime)}</td>
+                            <td class="table-number editable">${addedOrder.allTables != null ? addedOrder.allTables.id : 'N/A'}</td>
+                            <td class="total-amount editable">${addedOrder.totalAmount}</td>
+                            <td class="status editable">${addedOrder.status}</td>
+                            <td class="description editable">${addedOrder.description}</td>
+                            <td class="actions-column">
+                                <button class="delete-btn" style="display: none;">Delete</button>
+                            </td>
+                        `;
                         tbody.appendChild(newRow);
                         descriptionInput.value = "";
                         tableSelect.selectedIndex = 0;
+                        orderDateInput.value = "";
+                        orderTimeInput.value = "";
                         fetchOrderItems(addedOrder.orderId);
                     })
                     .catch(error => alert(error.message));
@@ -317,6 +332,10 @@
                     th:text="${table.id + ' (мест: ' + table.seats + ')'}">
             </option>
         </select>
+        <label for="orderDate">Дата заказа:</label>
+        <input type="date" id="orderDate">
+        <label for="orderTime">Время заказа:</label>
+        <input type="time" id="orderTime">
         <label for="orderDescription">Описание заказа:</label>
         <input type="text" id="orderDescription" placeholder="Введите описание заказа">
         <button id="addOrderButton">Add</button>
@@ -397,7 +416,7 @@
         <tbody>
         <tr th:each="order : ${orders}" class="menu-row" th:attr="data-order-id=${order.orderId}">
             <td class="order-id editable" th:text="${order.orderId}"></td>
-            <td th:text="${#temporals.format(order.orderTime, 'dd.MM.yyyy HH:mm')}"></td>
+            <td th:text="${#temporals.format(order.orderDate, 'dd.MM.yyyy') + ' ' + #temporals.format(order.orderTime, 'HH:mm')}"></td>
             <td class="table-number editable" th:text="${order.allTables != null ? order.allTables.id : 'N/A'}"></td>
             <td class="total-amount editable" th:text="${order.totalAmount}"></td>
             <td class="status editable" th:text="${order.status}"></td>

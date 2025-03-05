@@ -1,30 +1,24 @@
 package com.restaurant.controllers;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.entities.*;
 import com.restaurant.repositories.AllTablesRepository;
 import com.restaurant.repositories.MenuRepository;
-import com.restaurant.repositories.OrderItemRepository;
 import com.restaurant.repositories.OrdersRepository;
-import org.aspectj.weaver.ast.Or;
-import org.hibernate.query.Order;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.*;
 
 @Controller
 @RequestMapping("/orders")
 public class OrdersController {
+
     private final OrdersRepository ordersRepository;
     private final AllTablesRepository allTablesRepository;
     private final MenuRepository menuRepository;
@@ -39,7 +33,6 @@ public class OrdersController {
 
     @GetMapping
     public String showOrders(Model model, Authentication authentication) throws Exception {
-
         List<String> menuTypes = menuRepository.findAll().stream()
                 .map(Menu::getMenuType)
                 .distinct()
@@ -50,15 +43,13 @@ public class OrdersController {
             List<Menu> dishes = menuRepository.findByMenuType(type);
             menuItems.put(type, dishes);
         }
-        System.out.println("-----");
-        System.out.println(objectMapper.writeValueAsString(menuItems));
-        System.out.println("-----");
         model.addAttribute("allDishes", objectMapper.writeValueAsString(menuItems));
         List<Orders> orders = ordersRepository.findAll();
         List<AllTables> allTables = allTablesRepository.findAll();
         model.addAttribute("orders", orders);
         model.addAttribute("allTables", allTables);
         model.addAttribute("menuTypes", menuTypes);
+
         boolean isAdmin = authentication != null && authentication.getAuthorities()
                 .stream()
                 .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
@@ -94,35 +85,36 @@ public class OrdersController {
     @PostMapping("/add")
     @ResponseBody
     public ResponseEntity<Orders> addOrder(@RequestBody Map<String, String> payload) {
-        // Если описание не указано, задаем дефолтное значение
         Orders newOrder = new Orders();
         Integer tableId = Integer.parseInt(payload.get("allTables"));
         String description = payload.get("description");
+
         if (description == null || description.isEmpty()) {
             newOrder.setDescription("-");
         } else {
             newOrder.setDescription(description);
         }
+
+        // Устанавливаем дату и время для заказа
+        String orderDateStr = payload.get("orderDate");
+        String orderTimeStr = payload.get("orderTime");
+
+        newOrder.setOrderDate(LocalDate.parse(orderDateStr));  // Устанавливаем дату
+        newOrder.setOrderTime(LocalTime.parse(orderTimeStr));  // Устанавливаем время
+
         AllTables table = allTablesRepository.findById(tableId).orElse(null);
         newOrder.setAllTables(table);
         newOrder.setTotalAmount(newOrder.getTotalAmount());
         newOrder.setStatus("Принят");
-        // Устанавливаем цену по умолчанию равной 0
-        // Сохраняем новое блюдо в БД
+
         Orders savedOrder = ordersRepository.save(newOrder);
 
         return ResponseEntity.ok(savedOrder);
     }
-
-
 
     @PostMapping("/delete/{id}")
     @ResponseBody
     public void deleteOrder(@PathVariable Long id) {
         ordersRepository.deleteById(id);
     }
-
-
-
-
 }

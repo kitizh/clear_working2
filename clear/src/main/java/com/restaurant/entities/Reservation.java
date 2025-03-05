@@ -1,7 +1,8 @@
 package com.restaurant.entities;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+        import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -13,8 +14,11 @@ public class Reservation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "reservation_date", nullable = false)
+    private LocalDate reservationDate;
+
     @Column(name = "reservation_time", nullable = false)
-    private LocalDateTime reservationTime;
+    private LocalTime reservationTime;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -22,25 +26,37 @@ public class Reservation {
     @Column(name = "phone_number", nullable = false)
     private String phoneNumber;
 
-    // Вместо @ManyToMany – OneToMany к bridge-entity ReservedTable
-    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<ReservedTable> reservedTables = new HashSet<>();
+    // Связь с таблицей AllTables
+    @ManyToOne
+    @JoinColumn(name = "table_id", nullable = false)
+    private AllTables table;
 
-    // Вместо @ManyToMany – OneToMany к bridge-entity ReservedService
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ReservedService> reservedServices = new HashSet<>();
 
-    // Геттеры/сеттеры
+    // Геттеры и сеттеры
 
     public Long getId() {
         return id;
     }
 
-    public LocalDateTime getReservationTime() {
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public LocalDate getReservationDate() {
+        return reservationDate;
+    }
+
+    public void setReservationDate(LocalDate reservationDate) {
+        this.reservationDate = reservationDate;
+    }
+
+    public LocalTime getReservationTime() {
         return reservationTime;
     }
 
-    public void setReservationTime(LocalDateTime reservationTime) {
+    public void setReservationTime(LocalTime reservationTime) {
         this.reservationTime = reservationTime;
     }
 
@@ -60,12 +76,12 @@ public class Reservation {
         this.phoneNumber = phoneNumber;
     }
 
-    public Set<ReservedTable> getReservedTables() {
-        return reservedTables;
+    public AllTables getTable() {
+        return table;
     }
 
-    public void setReservedTables(Set<ReservedTable> reservedTables) {
-        this.reservedTables = reservedTables;
+    public void setTable(AllTables table) {
+        this.table = table;
     }
 
     public Set<ReservedService> getReservedServices() {
