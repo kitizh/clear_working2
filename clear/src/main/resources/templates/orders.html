@@ -123,6 +123,47 @@
                 });
         }
 
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
+
+        function sortTable(columnIndex) {
+            const table = document.querySelector('.menu-table tbody');
+            const rows = Array.from(table.rows);
+            const currentColumn = table.querySelectorAll('th')[columnIndex];
+
+            // Проверяем направление сортировки
+            const direction = currentSortColumn === columnIndex && currentSortDirection === 'asc' ? 'desc' : 'asc';
+            rows.sort((rowA, rowB) => {
+                const cellA = rowA.cells[columnIndex].textContent.trim();
+                const cellB = rowB.cells[columnIndex].textContent.trim();
+
+                if (direction === 'asc') {
+                    return cellA > cellB ? 1 : -1;
+                } else {
+                    return cellA < cellB ? 1 : -1;
+                }
+            });
+
+            // Сортируем и обновляем таблицу
+            table.innerHTML = '';
+            rows.forEach(row => table.appendChild(row));
+            currentSortColumn = columnIndex;
+            currentSortDirection = direction;
+
+            // Обновляем стрелочки
+            updateSortArrows(columnIndex, direction);
+        }
+
+        function updateSortArrows(columnIndex, direction) {
+            const arrows = document.querySelectorAll('.sort-arrow');
+            arrows.forEach(arrow => arrow.remove());
+            const th = document.querySelectorAll('.menu-table th')[columnIndex];
+            const arrow = document.createElement('span');
+            arrow.classList.add('sort-arrow');
+            arrow.textContent = direction === 'asc' ? '↑' : '↓';
+            th.appendChild(arrow);
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             let isEditing = false;
 
@@ -183,6 +224,7 @@
             document.querySelectorAll('.order-id').forEach(cell => {
                 cell.addEventListener('click', function () {
                     let orderId = this.textContent.trim();
+                    this.closest('tr').classList.toggle('highlighted');
                     fetchOrderItems(orderId);
                 });
             });
@@ -271,6 +313,12 @@
                         dishSelect.appendChild(option);
                     });
                 }
+            });
+
+            sortTable(0);
+
+            document.querySelectorAll('.menu-table th').forEach((th, index) => {
+                th.addEventListener('click', () => sortTable(index));
             });
 
             document.getElementById("addOrderItemButton")?.addEventListener("click", function() {

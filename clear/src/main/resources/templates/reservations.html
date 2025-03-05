@@ -186,6 +186,47 @@
 </div>
 
 <script th:inline="javascript">
+    let currentSortColumn = null;
+    let currentSortDirection = 'asc';
+
+    function sortTable(columnIndex) {
+        const table = document.querySelector('.menu-table tbody');
+        const rows = Array.from(table.rows);
+        const currentColumn = table.querySelectorAll('th')[columnIndex];
+
+        // Проверяем направление сортировки
+        const direction = currentSortColumn === columnIndex && currentSortDirection === 'asc' ? 'desc' : 'asc';
+        rows.sort((rowA, rowB) => {
+            const cellA = rowA.cells[columnIndex].textContent.trim();
+            const cellB = rowB.cells[columnIndex].textContent.trim();
+
+            if (direction === 'asc') {
+                return cellA > cellB ? 1 : -1;
+            } else {
+                return cellA < cellB ? 1 : -1;
+            }
+        });
+
+        // Сортируем и обновляем таблицу
+        table.innerHTML = '';
+        rows.forEach(row => table.appendChild(row));
+        currentSortColumn = columnIndex;
+        currentSortDirection = direction;
+
+        // Обновляем стрелочки
+        updateSortArrows(columnIndex, direction);
+    }
+
+    function updateSortArrows(columnIndex, direction) {
+        const arrows = document.querySelectorAll('.sort-arrow');
+        arrows.forEach(arrow => arrow.remove());
+        const th = document.querySelectorAll('.menu-table th')[columnIndex];
+        const arrow = document.createElement('span');
+        arrow.classList.add('sort-arrow');
+        arrow.textContent = direction === 'asc' ? '↑' : '↓';
+        th.appendChild(arrow);
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         // Обработчик изменения столика или даты
         const tableSelect = document.getElementById('tableId');
@@ -247,53 +288,11 @@
         });
 
         // ------------------- Сортировка -------------------
-        let sortOrder = {
-            id: true,
-            table: true,
-            time: true
-        };
-
-        const sortColumns = {
-            'sortId': 'id',
-            'sortTable': 'table',
-            'sortTime': 'time'
-        };
-
-        Object.keys(sortColumns).forEach((columnId) => {
-            const column = document.getElementById(columnId);
-            column.addEventListener('click', () => {
-                const sortKey = sortColumns[columnId];
-                sortReservations(sortKey);
-                toggleSortOrder(sortKey);
-            });
+        document.querySelectorAll('.menu-table th').forEach((th, index) => {
+            th.addEventListener('click', () => sortTable(index));
         });
 
-        function toggleSortOrder(sortKey) {
-            sortOrder[sortKey] = !sortOrder[sortKey];
-        }
-
-        function sortReservations(sortKey) {
-            const rows = Array.from(document.querySelectorAll('.reservation-row'));
-            rows.sort((rowA, rowB) => {
-                const cellA = rowA.querySelector(`.res-${sortKey}`).textContent.trim();
-                const cellB = rowB.querySelector(`.res-${sortKey}`).textContent.trim();
-                const isNumber = !isNaN(cellA);
-
-                let comparison = 0;
-                if (isNumber) {
-                    comparison = parseInt(cellA) - parseInt(cellB);
-                } else if (sortKey === 'time') {
-                    comparison = new Date(cellA) - new Date(cellB);
-                } else {
-                    comparison = cellA.localeCompare(cellB);
-                }
-
-                return sortOrder[sortKey] ? comparison : -comparison;
-            });
-
-            const tbody = document.querySelector('tbody');
-            rows.forEach(row => tbody.appendChild(row)); // Reorder rows
-        }
+        sortTable(0);
 
         // ------------------- Режим редактирования -------------------
         let editMode = false;

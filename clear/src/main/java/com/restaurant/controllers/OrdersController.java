@@ -48,6 +48,8 @@ public class OrdersController {
         List<AllTables> allTables = allTablesRepository.findAll();
         model.addAttribute("orders", orders);
         model.addAttribute("allTables", allTables);
+        String ordersJson = objectMapper.writeValueAsString(orders);
+        model.addAttribute("ordersJson", ordersJson);
         model.addAttribute("menuTypes", menuTypes);
 
         boolean isAdmin = authentication != null && authentication.getAuthorities()
