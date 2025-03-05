@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Reservations</title>
+
+    <!-- Подключение ваших стилей -->
+    <link rel="stylesheet" th:href="@{/css/menu.css}"/>
+
+    <style>
+        .reservation-form, .admin-panel {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+        .reservation-form h2 {
+            margin-top: 0;
+        }
+        .reservation-form label {
+            display: inline-block;
+            width: 150px;
+            text-align: right;
+            margin-right: 10px;
+        }
+        .reservation-form .form-row {
+            margin-bottom: 10px;
+        }
+        .reservation-form select,
+        .reservation-form input {
+            padding: 5px;
+            font-size: 14px;
+        }
+        .reservation-form button {
+            margin-top: 10px;
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+        .services-list li {
+            margin-bottom: 5px;
+        }
+        .delete-service-btn {
+            margin-left: 10px;
+            color: red;
+            cursor: pointer;
+        }
+        /* Можно добавить стиль для чекбоксов, если нужно */
+        #serviceCheckboxes div {
+            margin-bottom: 5px;
+        }
+    </style>
+
+    <!-- JSON со списком услуг (если понадобится на фронте) -->
+    <script type="application/json" id="servicesJson" th:utext="${servicesJson}"></script>
+</head>
+<body>
+
+<nav>
+    <ul>
+        <li><a href="/" class="home-button">Главная</a></li>
+        <li><a href="/menu">Меню</a></li>
+        <li><a href="/orders">Заказы</a></li>
+        <li><a href="/reserve" class="active">Брони</a></li>
+    </ul>
+</nav>
+
+<div class="container">
+
+    <!-- Форма для создания новой брони -->
+    <div class="reservation-form">
+        <h2>Создать новую бронь</h2>
+
+        <div class="form-row">
+            <label for="tableId">Столик:</label>
+            <select id="tableId">
+                <option value="">--Выбрать--</option>
+                <option th:each="t : ${allTables}"
+                        th:value="${t.id}"
+                        th:text="${'Стол ' + t.id + ' (мест: ' + t.seats + ')'}"></option>
+            </select>
+        </div>
+
+        <!-- Отдельное поле для выбора даты -->
+        <div class="form-row">
+            <label for="reservationDate">Дата:</label>
+            <input type="date" id="reservationDate"/>
+        </div>
+        <!-- Выпадающий список для выбора времени -->
+        <div class="form-row">
+            <label for="reservationTime">Время:</label>
+            <select id="reservationTime">
+                <option value="12:00">12:00</option>
+                <option value="13:00">13:00</option>
+                <option value="14:00">14:00</option>
+                <option value="15:00">15:00</option>
+                <option value="16:00">16:00</option>
+                <option value="17:00">17:00</option>
+                <option value="18:00">18:00</option>
+                <option value="19:00">19:00</option>
+                <option value="20:00">20:00</option>
+                <option value="21:00">21:00</option>
+            </select>
+        </div>
+
+        <div class="form-row">
+            <label for="resName">Имя:</label>
+            <input type="text" id="resName"/>
+        </div>
+
+        <div class="form-row">
+            <label for="resPhone">Телефон:</label>
+            <input type="text" id="resPhone"/>
+        </div>
+
+        <!-- Список услуг в виде чекбоксов -->
+        <div class="form-row">
+            <label>Услуги:</label>
+            <div id="serviceCheckboxes">
+                <div th:each="srv : ${services}">
+                    <input type="checkbox" name="services" id="srv-[[${srv.id}]]" th:value="${srv.id}">
+                    <label for="srv-[[${srv.id}]]" th:text="${srv.serviceName}"></label>
+                </div>
+            </div>
+        </div>
+
+
+        <button id="createReservationBtn">Create Reservation</button>
+    </div>
+
+    <!-- Блок админа (виден только если isAdmin == true) -->
+    <div class="admin-panel" th:if="${isAdmin}">
+        <h2>Управление Бронями</h2>
+
+        <div class="admin-actions">
+            <button id="edit-button">Edit</button>
+        </div>
+
+        <table class="menu-table">
+            <colgroup>
+                <col style="width: 10%;">
+                <col style="width: 20%;">
+                <col style="width: 25%;">
+                <col style="width: 20%;">
+                <col style="width: 25%;">
+            </colgroup>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Время брони</th>
+                <th>Имя</th>
+                <th>Телефон</th>
+                <th class="actions-column">Действия</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${reservations}" class="reservation-row" th:attr="data-id=${r.id}">
+                <td class="res-id editable" th:text="${r.id}"></td>
+                <td class="res-time editable" th:text="${#temporals.format(r.reservationTime, 'yyyy-MM-dd''T''HH:mm')}"></td>
+                <td class="res-name editable" th:text="${r.name}"></td>
+                <td class="res-phone editable" th:text="${r.phoneNumber}"></td>
+                <td class="actions-column">
+                    <button class="delete-res-btn" style="display: none;">Delete</button>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(reservations)}">
+                <td colspan="5">Бронирований пока нет</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <hr/>
+
+        <h3>Услуги для брони #<span id="currentResId"></span></h3>
+        <ul id="serviceList" class="services-list">
+            <li>Ничего не выбрано</li>
+        </ul>
+
+        <div>
+            <label>Добавить услуги:</label>
+            <select id="adminServiceSelect" multiple size="4" style="width: 200px;">
+                <option th:each="srv : ${services}"
+                        th:value="${srv.id}"
+                        th:text="${srv.serviceName}"></option>
+            </select>
+            <button id="addServicesBtn">Add Services</button>
+        </div>
+    </div>
+</div>
+
+<!-- Скрипты (обязательно с th:inline, чтобы работала подстановка переменных) -->
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // ------------------- Создание брони (для всех пользователей) -------------------
+        const createBtn = document.getElementById('createReservationBtn');
+        if (createBtn) {
+            createBtn.addEventListener('click', () => {
+                const tableId = document.getElementById('tableId').value.trim();
+                const reservationDate = document.getElementById('reservationDate').value.trim();
+                const reservationTime = document.getElementById('reservationTime').value.trim();
+                const name = document.getElementById('resName').value.trim();
+                const phone = document.getElementById('resPhone').value.trim();
+
+                if (!tableId || !reservationDate || !reservationTime || !name || !phone) {
+                    alert('Пожалуйста, заполните все поля');
+                    return;
+                }
+
+                // Собираем выбранные услуги из чекбоксов
+                const serviceCheckboxes = document.querySelectorAll('#serviceCheckboxes input[type=checkbox]');
+                const selectedServices = [];
+                serviceCheckboxes.forEach(chk => {
+                    if (chk.checked) {
+                        selectedServices.push(parseInt(chk.value));
+                    }
+                });
+                // Здесь, даже если ни один чекбокс не выбран, selectedServices будет пустым массивом.
+
+                // Формируем ISO-строку (например, "2025-03-10T15:00:00")
+                const isoTime = reservationDate + 'T' + reservationTime + ':00';
+
+                const payload = {
+                    tableId: parseInt(tableId),
+                    reservationTime: isoTime,
+                    name: name,
+                    phone: phone,
+                    services: selectedServices  // Передаём список (возможно пустой)
+                };
+
+                fetch('/reserve/new', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                })
+                    .then(r => r.json())
+                    .then(resp => {
+                        if (resp.reservationId) {
+                            alert('Бронь успешно создана! ID: ' + resp.reservationId);
+                            // Сбросим форму
+                            document.getElementById('tableId').value = "";
+                            document.getElementById('reservationDate').value = "";
+                            document.getElementById('reservationTime').selectedIndex = 0;
+                            document.getElementById('resName').value = "";
+                            document.getElementById('resPhone').value = "";
+                            serviceCheckboxes.forEach(chk => chk.checked = false);
+                        } else {
+                            alert('Ошибка: ' + JSON.stringify(resp));
+                        }
+                    })
+                    .catch(err => alert('Ошибка: ' + err));
+            });
+        }
+
+
+        // ------------------- Админ-Функционал -------------------
+        var isAdmin = /*[[${isAdmin}]]*/ false;
+        if (!isAdmin) return;
+
+        let editMode = false;
+        const editBtn = document.getElementById('edit-button');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                editMode = !editMode;
+                document.body.classList.toggle('edit-mode', editMode);
+                editBtn.textContent = editMode ? 'Save' : 'Edit';
+
+                document.querySelectorAll('.reservation-row .editable').forEach(cell => {
+                    cell.contentEditable = editMode;
+                    cell.classList.toggle('editing', editMode);
+                });
+                document.querySelectorAll('.delete-res-btn').forEach(btn => {
+                    btn.style.display = editMode ? 'inline-block' : 'none';
+                });
+
+                if (!editMode) {
+                    saveReservations();
+                }
+            });
+        }
+
+        function saveReservations() {
+            const rows = document.querySelectorAll('.reservation-row');
+            const dataToSend = [];
+            rows.forEach(row => {
+                const id = row.querySelector('.res-id').textContent.trim();
+                let timeVal = row.querySelector('.res-time').textContent.trim();
+                if (timeVal.length === 16) {
+                    timeVal += ':00';
+                }
+                const nameVal = row.querySelector('.res-name').textContent.trim();
+                const phoneVal = row.querySelector('.res-phone').textContent.trim();
+
+                dataToSend.push({
+                    id: id,
+                    reservationTime: timeVal,
+                    name: nameVal,
+                    phoneNumber: phoneVal
+                });
+            });
+            fetch('/reserve/update', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(dataToSend)
+            })
+                .then(r => {
+                    if (!r.ok) alert('Ошибка при сохранении изменений');
+                });
+        }
+
+        document.querySelectorAll('.delete-res-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const row = btn.closest('.reservation-row');
+                const resId = row.getAttribute('data-id');
+                fetch('/reserve/delete/' + resId, {method: 'POST'})
+                    .then(r => {
+                        if (r.ok) {
+                            row.remove();
+                            clearServicesView();
+                        } else {
+                            alert('Ошибка при удалении');
+                        }
+                    });
+            });
+        });
+
+        // При клике на ID брони – загружаем список услуг
+        document.querySelectorAll('.res-id').forEach(cell => {
+            cell.addEventListener('click', () => {
+                const row = cell.closest('.reservation-row');
+                const resId = row.getAttribute('data-id');
+                loadReservationServices(resId);
+            });
+        });
+
+        const currentResIdSpan = document.getElementById('currentResId');
+        const serviceList = document.getElementById('serviceList');
+
+        function clearServicesView() {
+            currentResIdSpan.textContent = '';
+            serviceList.innerHTML = '<li>Ничего не выбрано</li>';
+        }
+
+        function loadReservationServices(resId) {
+            fetch(`/reserve/${resId}/services`)
+                .then(r => r.json())
+                .then(data => {
+                    currentResIdSpan.textContent = resId;
+                    if (data.length === 0) {
+                        serviceList.innerHTML = '<li>Нет услуг</li>';
+                    } else {
+                        serviceList.innerHTML = '';
+                        data.forEach(item => {
+                            const li = document.createElement('li');
+                            li.textContent = item.serviceName + ' — ' + item.description;
+                            const delBtn = document.createElement('span');
+                            delBtn.textContent = ' [X]';
+                            delBtn.classList.add('delete-service-btn');
+                            delBtn.addEventListener('click', () => {
+                                deleteReservationService(resId, item.reservedServiceId, li);
+                            });
+                            li.appendChild(delBtn);
+                            serviceList.appendChild(li);
+                        });
+                    }
+                })
+                .catch(e => console.error(e));
+        }
+
+        function deleteReservationService(resId, rsId, liElement) {
+            fetch(`/reserve/${resId}/services/delete/${rsId}`, {method: 'POST'})
+                .then(r => {
+                    if (r.ok) {
+                        liElement.remove();
+                    } else {
+                        alert('Ошибка при удалении услуги');
+                    }
+                });
+        }
+
+        const addServicesBtn = document.getElementById('addServicesBtn');
+        if (addServicesBtn) {
+            addServicesBtn.addEventListener('click', () => {
+                const resId = currentResIdSpan.textContent.trim();
+                if (!resId) {
+                    alert('Сначала выберите бронь');
+                    return;
+                }
+                const adminServiceSelect = document.getElementById('adminServiceSelect');
+                const selected = Array.from(adminServiceSelect.selectedOptions).map(o => parseInt(o.value));
+                if (selected.length === 0) {
+                    alert('Выберите хотя бы одну услугу');
+                    return;
+                }
+                fetch(`/reserve/${resId}/services/add`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({serviceIds: selected})
+                })
+                    .then(r => {
+                        if (r.ok) {
+                            loadReservationServices(resId);
+                            adminServiceSelect.selectedIndex = -1;
+                        } else {
+                            alert('Ошибка при добавлении услуг');
+                        }
+                    });
+            });
+        }
+
+        // При загрузке страницы определяем бронь с максимальным id и загружаем её услуги
+        const rows = document.querySelectorAll('.reservation-row');
+        if (rows.length > 0) {
+            let maxId = 0;
+            rows.forEach(row => {
+                const id = parseInt(row.getAttribute('data-id'));
+                if (id > maxId) {
+                    maxId = id;
+                }
+            });
+            loadReservationServices(maxId);
+        }
+    });
+</script>
+
+</body>
+</html>

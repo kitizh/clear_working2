@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Statistics</title>
+    <link rel="stylesheet" th:href="@{/css/menu.css}"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        .stats-container {
+            width: 90%;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .filter-form {
+            margin: 20px 0;
+        }
+        .chart-block {
+            margin: 20px 0;
+        }
+        canvas {
+            max-width: 700px;
+            height: 400px;
+            margin: 0 auto;
+        }
+    </style>
+    <!-- Подключаем локальный Chart.js (или иным способом) -->
+    <script th:src="@{/js/chart.min.js}"></script>
+</head>
+<body>
+
+<nav>
+    <ul>
+        <li><a href="/" class="home-button">Главная</a></li>
+        <li><a href="/menu">Меню</a></li>
+        <li><a href="/orders">Заказы</a></li>
+        <li><a href="/reserve">Брони</a></li>
+        <li><a href="/stats" class="active">Статистика</a></li>
+    </ul>
+</nav>
+
+<div class="container stats-container">
+    <h1>Статистика</h1>
+
+    <!-- Форма выбора периода -->
+    <div class="filter-form">
+        <form action="#" method="get">
+            <label>Дата начала:</label>
+            <input type="date" name="start" th:value="${startDate}"/>
+            <label>Дата конца:</label>
+            <input type="date" name="end" th:value="${endDate}"/>
+            <button type="submit">Показать</button>
+        </form>
+    </div>
+
+    <hr/>
+
+    <div class="chart-block">
+        <h2>Популярность блюд по категориям</h2>
+        <canvas id="categoryChart"></canvas>
+    </div>
+
+    <div class="chart-block">
+        <h2>Самое посещаемое время (по часам)</h2>
+        <canvas id="hoursChart"></canvas>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Получим массивы данных из модели
+        const catLabels = /*[[${catLabels}]]*/ [];
+        const catValues = /*[[${catValues}]]*/ [];
+
+        const hoursLabels = /*[[${hoursLabels}]]*/ [];
+        const hoursValues = /*[[${hoursValues}]]*/ [];
+
+        // chart для категорий
+        const ctx1 = document.getElementById('categoryChart').getContext('2d');
+        const categoryChart = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: catLabels,
+                datasets: [{
+                    label: 'Количество заказанных блюд',
+                    data: catValues
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // chart для часов
+        const ctx2 = document.getElementById('hoursChart').getContext('2d');
+        const hoursChart = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: hoursLabels,
+                datasets: [{
+                    label: 'Число заказов',
+                    data: hoursValues
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    });
+</script>
+</body>
+</html>
