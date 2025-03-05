@@ -44,13 +44,11 @@
             color: red;
             cursor: pointer;
         }
-        /* Можно добавить стиль для чекбоксов, если нужно */
         #serviceCheckboxes div {
             margin-bottom: 5px;
         }
     </style>
 
-    <!-- JSON со списком услуг (если понадобится на фронте) -->
     <script type="application/json" id="servicesJson" th:utext="${servicesJson}"></script>
 </head>
 <body>
@@ -66,7 +64,7 @@
 
 <div class="container">
 
-    <!-- Форма для создания новой брони (доступна для всех пользователей) -->
+    <!-- Форма для создания новой брони -->
     <div class="reservation-form">
         <h2>Создать новую бронь</h2>
 
@@ -80,25 +78,15 @@
             </select>
         </div>
 
-        <!-- Отдельное поле для выбора даты -->
         <div class="form-row">
             <label for="reservationDate">Дата:</label>
             <input type="date" id="reservationDate"/>
         </div>
-        <!-- Выпадающий список для выбора времени -->
+
         <div class="form-row">
             <label for="reservationTime">Время:</label>
-            <select id="reservationTime">
-                <option value="12:00">12:00</option>
-                <option value="13:00">13:00</option>
-                <option value="14:00">14:00</option>
-                <option value="15:00">15:00</option>
-                <option value="16:00">16:00</option>
-                <option value="17:00">17:00</option>
-                <option value="18:00">18:00</option>
-                <option value="19:00">19:00</option>
-                <option value="20:00">20:00</option>
-                <option value="21:00">21:00</option>
+            <select id="reservationTime" disabled>
+                <!-- Время будет динамически заполняться -->
             </select>
         </div>
 
@@ -112,7 +100,6 @@
             <input type="text" id="resPhone"/>
         </div>
 
-        <!-- Список услуг в виде чекбоксов -->
         <div class="form-row">
             <label>Услуги:</label>
             <div id="serviceCheckboxes">
@@ -126,7 +113,7 @@
         <button id="createReservationBtn">Create Reservation</button>
     </div>
 
-    <!-- Блок админа (виден только если isAdmin == true) -->
+    <!-- Блок админа -->
     <div class="admin-panel" th:if="${isAdmin}">
         <h2>Управление Бронями</h2>
 
@@ -154,9 +141,9 @@
             </colgroup>
             <thead>
             <tr>
-                <th id="sortId" class="sortable">ID</th>
-                <th id="sortTable" class="sortable">Столик</th> <!-- Изменено местами -->
-                <th id="sortTime" class="sortable">Дата и время брони</th> <!-- Изменено местами -->
+                <th id="sortId" class="sortable">ID <span class="sort-direction">▲</span></th>
+                <th id="sortTable" class="sortable">Столик</th>
+                <th id="sortTime" class="sortable">Дата и время брони</th>
                 <th>Имя</th>
                 <th>Телефон</th>
                 <th class="actions-column">Действия</th>
@@ -173,7 +160,6 @@
                     <button class="delete-res-btn" style="display: none;">Delete</button>
                 </td>
             </tr>
-
 
             <tr th:if="${#lists.isEmpty(reservations)}">
                 <td colspan="6">Бронирований пока нет</td>
@@ -199,11 +185,56 @@
 
 </div>
 
-<!-- Скрипты (с th:inline, чтобы работала подстановка переменных) -->
-<!-- Весь код выше остается без изменений -->
-
 <script th:inline="javascript">
     document.addEventListener('DOMContentLoaded', () => {
+        // Обработчик изменения столика или даты
+        const tableSelect = document.getElementById('tableId');
+        const dateInput = document.getElementById('reservationDate');
+        const timeSelect = document.getElementById('reservationTime');
+
+        const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', () => {
+                const selectedTables = Array.from(document.querySelectorAll('#tableFilter input[type="checkbox"]:checked')).map(chk => chk.value);
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+
+                filterReservations(selectedTables, startDate, endDate);
+            });
+        }
+
+        tableSelect.addEventListener('change', updateAvailableTimes);
+        dateInput.addEventListener('change', updateAvailableTimes);
+
+        function updateAvailableTimes() {
+            const tableId = tableSelect.value;
+            const reservationDate = dateInput.value;
+
+            if (!tableId || !reservationDate) {
+                timeSelect.disabled = true;
+                return;
+            }
+
+            timeSelect.disabled = false;
+
+            const reservedTimes = getReservedTimes(tableId, reservationDate);
+            const options = timeSelect.querySelectorAll('option');
+            options.forEach(option => {
+                const time = option.value;
+                if (reservedTimes.includes(time)) {
+                    option.disabled = true;
+                } else {
+                    option.disabled = false;
+                }
+            });
+        }
+
+        function getReservedTimes(tableId, reservationDate) {
+            // Псевдокод: запрос на сервер для получения занятых времен для данного столика на указанную дату
+            // Пример возвращаемого массива: ["12:00", "15:00"]
+            return ["12:00", "15:00"]; // Замени на реальные данные из сервера
+        }
+
         // ------------------- Фильтрация по столикам -------------------
         const tableFilter = document.getElementById('tableFilter');
         tableFilter.addEventListener('change', () => {
@@ -390,7 +421,6 @@
                     return;
                 }
 
-                // Отправка на сервер для добавления услуг
                 fetch(`/reserve/${resId}/services/add`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -398,8 +428,8 @@
                 })
                     .then(r => {
                         if (r.ok) {
-                            loadReservationServices(resId); // Обновим список услуг
-                            adminServiceSelect.selectedIndex = -1; // Сбросим выбор
+                            loadReservationServices(resId);
+                            adminServiceSelect.selectedIndex = -1;
                         } else {
                             alert('Ошибка при добавлении услуг');
                         }
@@ -458,10 +488,8 @@
                     .catch(err => alert('Ошибка: ' + err));
             });
         }
-
     });
 </script>
-
 
 </body>
 </html>

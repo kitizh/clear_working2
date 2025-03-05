@@ -29,6 +29,11 @@ public class AdminController {
         return "index";
     }
 
+    @GetMapping("/about")
+    public String getAboutPage() {
+        return "about";
+    }
+
     @GetMapping("/login")
     public String showLoginPage() {
         return "login";
