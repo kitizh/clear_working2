@@ -1,5 +1,6 @@
 package com.restaurant.entities;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
         import java.time.LocalDate;
 import java.time.LocalTime;
@@ -32,6 +33,7 @@ public class Reservation {
     private AllTables table;
 
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private Set<ReservedService> reservedServices = new HashSet<>();
 
     // Геттеры и сеттеры

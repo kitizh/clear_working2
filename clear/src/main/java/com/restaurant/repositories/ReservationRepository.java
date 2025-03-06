@@ -1,5 +1,6 @@
 package com.restaurant.repositories;
 
+import com.restaurant.entities.AllTables;
 import com.restaurant.entities.Reservation;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,5 +17,5 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Object[]> findTopReservationTimesByDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, Pageable pageable);
     @Query("SELECT r.table, COUNT(r) FROM Reservation r WHERE r.reservationDate BETWEEN :startDate AND :endDate GROUP BY r.table ORDER BY COUNT(r) DESC")
     List<Object[]> findTopTablesByDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, Pageable pageable);
-
+    List<Reservation> findByTableAndReservationDate(AllTables table, LocalDate reservationDate);
 }

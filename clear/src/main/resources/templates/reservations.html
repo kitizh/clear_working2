@@ -39,11 +39,7 @@
         .services-list li {
             margin-bottom: 5px;
         }
-        .delete-service-btn {
-            margin-left: 10px;
-            color: red;
-            cursor: pointer;
-        }
+
         #serviceCheckboxes div {
             margin-bottom: 5px;
         }
@@ -118,6 +114,8 @@
         <button id="createReservationBtn">Create Reservation</button>
     </div>
 
+    <div id="currentDT" th:text="${currentDT}" style="display: none;"></div>
+    <div id="reservationsJson" th:text="${reservationsJson}" style="display: none;"></div>
     <!-- Блок админа -->
     <div class="admin-panel" th:if="${isAdmin}">
         <h2>Управление Бронями</h2>
@@ -125,16 +123,30 @@
         <!-- Фильтрация по столикам -->
         <div class="form-row">
             <label for="tableFilter">Фильтрация по столикам:</label>
-            <select id="tableFilter">
+            <select id="tableFilter" multiple size="5">
                 <option value="">-- Все столики --</option>
                 <option th:each="t : ${allTables}" th:value="${t.id}" th:text="${'Стол ' + t.id}"></option>
             </select>
         </div>
 
-        <div class="admin-actions">
+        <!-- Фильтрация по датам -->
+        <div class="form-row">
+            <label for="startDate">Дата от:</label>
+            <input type="date" id="startDate"/>
+
+            <label for="endDate">Дата до:</label>
+            <input type="date" id="endDate"/>
+        </div>
+
+        <div class="form-row">
+            <button id="applyFiltersBtn">Применить фильтры</button>
+        </div>
+
+        <div class="admin-actions" th:if="${isAdmin}">
             <button id="edit-button">Edit</button>
         </div>
 
+        <!-- Таблица бронирований -->
         <table class="menu-table">
             <colgroup>
                 <col style="width: 10%;">
@@ -146,17 +158,17 @@
             </colgroup>
             <thead>
             <tr>
-                <th id="sortId" class="sortable">ID <span class="sort-direction">▲</span></th>
-                <th id="sortTable" class="sortable">Столик</th>
-                <th id="sortTime" class="sortable">Дата и время брони</th>
+                <th>ID</th>
+                <th>Столик</th>
+                <th>Дата и время брони</th>
                 <th>Имя</th>
                 <th>Телефон</th>
                 <th class="actions-column">Действия</th>
             </tr>
             </thead>
             <tbody>
-            <tr th:each="r : ${reservations}" class="reservation-row" th:data-id="${r.id}" th:data-table-id="${r.table.id}">
-                <td class="res-id editable" th:text="${r.id}"></td>
+            <tr th:each="r : ${reservations}" class="reservation-row" th:data-id="${r.id}" th:data-table-id="${r.table.id}" th:data-date="${#temporals.format(r.reservationDate, 'yyyy-MM-dd')}">
+                <td class="res-id" th:text="${r.id}"></td>
                 <td class="res-table editable" th:text="${r.table != null ? r.table.id : 'N/A'}"></td>
                 <td class="res-time editable" th:text="${#temporals.format(r.reservationDate, 'yyyy-MM-dd') + ' ' + #temporals.format(r.reservationTime, 'HH:mm')}"></td>
                 <td class="res-name editable" th:text="${r.name}"></td>
@@ -171,22 +183,8 @@
             </tr>
             </tbody>
         </table>
-
-        <hr/>
-
-        <h3>Услуги для брони #<span id="currentResId"></span></h3>
-        <ul id="serviceList" class="services-list">
-            <li>Ничего не выбрано</li>
-        </ul>
-
-        <div>
-            <label>Добавить услуги:</label>
-            <select id="adminServiceSelect" multiple size="4" style="width: 200px;">
-                <option th:each="srv : ${services}" th:value="${srv.id}" th:text="${srv.serviceName}"></option>
-            </select>
-            <button id="addServicesBtn">Add Services</button>
-        </div>
     </div>
+
 
 </div>
 
@@ -248,64 +246,117 @@
 
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Обработчик изменения столика или даты
+
         const tableSelect = document.getElementById('tableId');
         const dateInput = document.getElementById('reservationDate');
         const timeSelect = document.getElementById('reservationTime');
 
-        const applyFiltersBtn = document.getElementById('applyFiltersBtn');
-        if (applyFiltersBtn) {
-            applyFiltersBtn.addEventListener('click', () => {
-                const selectedTables = Array.from(document.querySelectorAll('#tableFilter input[type="checkbox"]:checked')).map(chk => chk.value);
-                const startDate = document.getElementById('startDate').value;
-                const endDate = document.getElementById('endDate').value;
-
-                filterReservations(selectedTables, startDate, endDate);
-            });
-        }
-
-        tableSelect.addEventListener('change', updateAvailableTimes);
-        dateInput.addEventListener('change', updateAvailableTimes);
 
         function updateAvailableTimes() {
             const tableId = tableSelect.value;
             const reservationDate = dateInput.value;
 
             if (!tableId || !reservationDate) {
+                timeSelect.innerHTML = '';
+                timeSelect.disabled = true;
+                return;
+            }
+            const currentDateTime = document.getElementById('currentDT').textContent;
+            console.log("Текущее время из скрытого элемента:", currentDateTime);
+
+            const currentDate = new Date(currentDateTime);
+            console.log("Текущая дата как объект Date:", currentDate);
+            const selectedDate = new Date(reservationDate);
+            const currentHour = currentDate.getHours();
+
+            // Убедитесь, что выбранная дата не меньше сегодняшней
+            if (selectedDate.getDate() < currentDate.getDate()) { // Приводим текущий день к 00:00 для корректного сравнения
+                alert("Дата должна быть не раньше сегодняшней.");
+                timeSelect.innerHTML = '';
                 timeSelect.disabled = true;
                 return;
             }
 
-            timeSelect.disabled = false;
+            timeSelect.innerHTML = '';
 
-            const reservedTimes = getReservedTimes(tableId, reservationDate);
-            const options = timeSelect.querySelectorAll('option');
-            options.forEach(option => {
-                const time = option.value;
-                if (reservedTimes.includes(time)) {
-                    option.disabled = true;
-                } else {
-                    option.disabled = false;
-                }
-            });
+            // Получаем занятые времена для выбранного стола и даты
+            fetch(`/reserve/getReservedTimes?tableId=${tableId}&reservationDate=${reservationDate}`)
+                .then(response => response.json())
+                .then(reservedTimes => {
+                    // Обновляем список доступных временных слотов
+                    const availableTimes = [];
+
+                    for (let hour = 12; hour <= 21; hour++) {
+                        let time = `${hour}:00`;
+                        if (reservedTimes.includes(time)) continue;
+
+                        if (selectedDate.getDate() === currentDate.getDate()) {
+                            const currentTime = `${currentHour}:00`;
+
+                            if (time <= currentTime) continue; // Пропускаем время раньше текущего
+                        }
+
+                        availableTimes.push(time);
+                    }
+                    if (!availableTimes.length) {
+                        alert('Нет доступного времени')
+                        timeSelect.innerHTML = '';
+                        timeSelect.disabled = true;
+                        return;
+                    }
+
+                    // Заполняем список доступных временных слотов
+                    timeSelect.innerHTML = '';
+
+                    availableTimes.forEach(time => {
+                        const option = document.createElement('option');
+                        option.value = time;
+                        option.textContent = time;
+                        timeSelect.appendChild(option);
+                    });
+
+                    timeSelect.disabled = availableTimes.length === 0;
+                })
+                .catch(error => {
+                    console.error('Error fetching reserved times:', error);
+                });
         }
 
-        function getReservedTimes(tableId, reservationDate) {
-            // Псевдокод: запрос на сервер для получения занятых времен для данного столика на указанную дату
-            // Пример возвращаемого массива: ["12:00", "15:00"]
-            return ["12:00", "15:00"]; // Замени на реальные данные из сервера
-        }
+        // Слушаем изменения в столике и дате
+        tableSelect.addEventListener('change', updateAvailableTimes);
+        dateInput.addEventListener('change', updateAvailableTimes);
 
-        // ------------------- Фильтрация по столикам -------------------
+        // Обработчик изменения столика или даты
         const tableFilter = document.getElementById('tableFilter');
-        tableFilter.addEventListener('change', () => {
-            const selectedTable = tableFilter.value;
-            const rows = document.querySelectorAll('.reservation-row');
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+        const rows = document.querySelectorAll('.reservation-row');
+
+        applyFiltersBtn.addEventListener('click', () => {
+            const selectedTables = Array.from(tableFilter.selectedOptions).map(option => option.value);
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+
             rows.forEach(row => {
                 const tableId = row.getAttribute('data-table-id');
-                row.style.display = (selectedTable === "" || selectedTable === tableId) ? '' : 'none';
+                const reservationDate = row.getAttribute('data-date');
+
+                // Проверка, соответствует ли выбранным столикам
+                const matchesTable = selectedTables.length === 0 || selectedTables.includes(tableId);
+
+                // Проверка, соответствует ли дате
+                const matchesDate = (!startDate || reservationDate >= startDate) && (!endDate || reservationDate <= endDate);
+
+                // Если строка проходит фильтры, показываем её, иначе скрываем
+                if (matchesTable && matchesDate) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
             });
         });
+
 
         // ------------------- Сортировка -------------------
         document.querySelectorAll('.menu-table th').forEach((th, index) => {
@@ -455,6 +506,28 @@
                     });
             });
         }
+
+        // Привязываем обработчик события к кнопкам удаления брони (delete-res-btn)
+        document.querySelectorAll('.delete-res-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const row = this.closest('.reservation-row');
+                const resId = row.getAttribute('data-id');
+                // Отправляем запрос на удаление брони по resId
+                fetch(`/reserve/delete/${resId}`, { method: 'POST' })
+                    .then(response => {
+                        if (response.ok) {
+                            // Удаляем строку из таблицы после успешного удаления
+                            row.remove();
+                        } else {
+                            alert("Ошибка при удалении брони");
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Ошибка при удалении брони:", error);
+                    });
+            });
+        });
+
 
         // ------------------- Создание новой брони -------------------
         const createBtn = document.getElementById('createReservationBtn');

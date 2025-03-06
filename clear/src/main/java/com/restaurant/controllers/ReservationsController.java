@@ -18,7 +18,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Controller
@@ -78,14 +80,19 @@ public class ReservationsController {
         boolean isAdmin = role.equals("ROLE_WAITER") || role.equals("ROLE_ADMIN");
         model.addAttribute("isAdmin", isAdmin);
 
-        if (isAdmin) {
-            // Если админ, отдадим все брони
-            List<Reservation> reservations = reservationRepository.findAll();
-            model.addAttribute("reservations", reservations);
-        } else {
-            // Если НЕ админ, не передаём список бронирований (или передаём пустой)
-            model.addAttribute("reservations", Collections.emptyList());
-        }
+        LocalDateTime currentDateTime = LocalDateTime.now();
+
+        // Форматируем дату и время в строку
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        String formattedDateTime = currentDateTime.format(formatter);
+        System.out.println(formattedDateTime);
+
+        // Передаем дату и время в модель
+        model.addAttribute("currentDT", formattedDateTime);
+        List<Reservation> reservations = reservationRepository.findAll();
+        model.addAttribute("reservations", reservations);
+        String reservationsJson = objectMapper.writeValueAsString(reservations);
+        model.addAttribute("reservationsJson", reservationsJson);
 
         return "reservations";
     }
@@ -247,4 +254,39 @@ public class ReservationsController {
         reservationRepository.deleteById(resId);
         return ResponseEntity.ok("Reservation deleted");
     }
+
+    /**
+     * Получить занятые времена для конкретного столика и даты
+     * @param tableId - ID стола
+     * @param reservationDateStr - строка с датой в формате "yyyy-MM-dd"
+     * @return Список занятых времен на этот день для указанного стола
+     */
+    @GetMapping("/getReservedTimes")
+    @ResponseBody
+    public ResponseEntity<?> getReservedTimes(@RequestParam("tableId") Integer tableId, @RequestParam("reservationDate") String reservationDateStr) {
+        try {
+            // Преобразуем строку в LocalDate
+            LocalDate reservationDate = LocalDate.parse(reservationDateStr);
+
+            // Получаем столик по ID
+            AllTables table = allTablesRepository.findById(tableId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid table ID"));
+
+            // Получаем все бронирования для выбранного стола и даты
+            List<Reservation> reservations = reservationRepository.findByTableAndReservationDate(table, reservationDate);
+
+            // Извлекаем все времена бронирований
+            List<String> reservedTimes = new ArrayList<>();
+            for (Reservation reservation : reservations) {
+                reservedTimes.add(reservation.getReservationTime().toString());
+            }
+
+            // Возвращаем занятые времена
+            return ResponseEntity.ok(reservedTimes);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Invalid input or error occurred: " + e.getMessage()));
+        }
+    }
+
 }

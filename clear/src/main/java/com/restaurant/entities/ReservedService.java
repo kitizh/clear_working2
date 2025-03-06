@@ -1,5 +1,6 @@
 package com.restaurant.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 @Entity
@@ -10,6 +11,7 @@ public class ReservedService {
     private Long id;
 
     @ManyToOne
+    @JsonBackReference
     @JoinColumn(name = "reservation_id", nullable = false)
     private Reservation reservation;
 
