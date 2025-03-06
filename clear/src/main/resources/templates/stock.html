@@ -27,6 +27,47 @@
         }
     </style>
     <script>
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
+
+        function sortTable(columnIndex) {
+            const table = document.querySelector('.menu-table tbody');
+            const rows = Array.from(table.rows);
+            const currentColumn = table.querySelectorAll('th')[columnIndex];
+
+            // Проверяем направление сортировки
+            const direction = currentSortColumn === columnIndex && currentSortDirection === 'asc' ? 'desc' : 'asc';
+            rows.sort((rowA, rowB) => {
+                const cellA = rowA.cells[columnIndex].textContent.trim();
+                const cellB = rowB.cells[columnIndex].textContent.trim();
+
+                if (direction === 'asc') {
+                    return cellA > cellB ? 1 : -1;
+                } else {
+                    return cellA < cellB ? 1 : -1;
+                }
+            });
+
+            // Сортируем и обновляем таблицу
+            table.innerHTML = '';
+            rows.forEach(row => table.appendChild(row));
+            currentSortColumn = columnIndex;
+            currentSortDirection = direction;
+
+            // Обновляем стрелочки
+            updateSortArrows(columnIndex, direction);
+        }
+
+        function updateSortArrows(columnIndex, direction) {
+            const arrows = document.querySelectorAll('.sort-arrow');
+            arrows.forEach(arrow => arrow.remove());
+            const th = document.querySelectorAll('.menu-table th')[columnIndex];
+            const arrow = document.createElement('span');
+            arrow.classList.add('sort-arrow');
+            arrow.textContent = direction === 'asc' ? '↑' : '↓';
+            th.appendChild(arrow);
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             let isEditing = false;
 
@@ -304,6 +345,12 @@
             if (firstTab) {
                 showTab(firstTab.getAttribute('data-type'));
             }
+
+            document.querySelectorAll('.menu-table th').forEach((th, index) => {
+                th.addEventListener('click', () => sortTable(index));
+            });
+
+            sortTable(0);
         });
     </script>
 </head>
@@ -311,11 +358,14 @@
 <nav>
     <ul>
         <li><a href="/" class="home-button">Главная</a></li>
+        <li><a href="/about">Об авторе</a></li>
         <li><a href="/menu">Меню</a></li>
         <li><a href="/reserve">Брони</a></li>
-        <li><a href="/recipes" th:if="${isAdmin}">Рецепты</a></li>
-        <li><a href="/stock" class="active" th:if="${isAdmin}">Склад</a></li>
-        <li><a href="/orders" th:if="${isAdmin}">Заказы</a></li>
+        <li><a href="/recipes" th:if="${role == 'ROLE_COOK'}">Рецепты</a></li>
+        <li><a href="/stock" class="active" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK'}">Склад</a></li>
+        <li><a href="/statistics" th:if="${role == 'ROLE_MANAGER'}">Статистика</a></li>
+        <li><a href="/orders" th:if="${role == 'ROLE_WAITER'}">Заказы</a></li>
+        <li><a href="/logout" th:if="${role != 'GUEST'}">Выход</a></li>
     </ul>
 </nav>
 <div class="container">
@@ -374,9 +424,9 @@
             </thead>
             <tbody>
             <tr th:each="stock : ${stockItems.get(type)}" class="stock-row" th:attr="data-stock-id=${stock.stockId}">
-                <td class="product-name editable" th:text="${stock.item.itemName}"></td>
+                <td class="product-name" th:text="${stock.item.itemName}"></td>
                 <td class="amount editable" th:text="${stock.amount}"></td>
-                <td class="unit editable" th:text="${stock.unit}"></td>
+                <td class="unit" th:text="${stock.unit}"></td>
                 <td th:if="${isAdmin}" class="actions-column">
                     <button class="delete-btn" style="display: none;">Delete</button>
                 </td>

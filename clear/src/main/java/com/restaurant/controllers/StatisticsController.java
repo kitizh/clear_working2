@@ -5,6 +5,8 @@ import com.restaurant.entities.Menu;
 import com.restaurant.repositories.*;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -32,12 +34,25 @@ public class StatisticsController {
     }
 
     @GetMapping
-    public String showStatistics(Model model) {
+    public String showStatistics(Model model, Authentication authentication) {
         model.addAttribute("timePeriod", "day");  // Default period is 'day'
         model.addAttribute("popularDish", getTopDishes("day"));
         model.addAttribute("popularTable", getTopTables("day"));
         model.addAttribute("popularTime", getTopReservationTimes("day"));
         model.addAttribute("averageCheck", getAverageCheck("day"));
+
+        String role = authentication != null ? authentication.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .findFirst()
+                .orElse("GUEST") : "GUEST";  // Если не аутентифицирован, то роль GUEST
+
+        // Передаем роль в модель
+        model.addAttribute("role", role);
+
+        System.out.println(role);
+        boolean isAdmin = role.equals("ROLE_MANAGER") || role.equals("ROLE_ADMIN");
+        model.addAttribute("isAdmin", isAdmin);
 
         return "statistics";
     }

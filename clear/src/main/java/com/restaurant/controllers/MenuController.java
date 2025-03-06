@@ -5,6 +5,7 @@ import com.restaurant.repositories.MenuRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -37,20 +38,21 @@ public class MenuController {
             menuItems.put(type, dishes);
         }
 
-        // 🔍 Логирование
-        System.out.println("----- ТИПЫ БЛЮД -----");
-        menuTypes.forEach(System.out::println);
-        System.out.println("----- МЕНЮ -----");
-        menuItems.forEach((key, value) -> System.out.println(key + " -> " + value.size() + " блюд"));
-
         model.addAttribute("menuTypes", menuTypes);
         model.addAttribute("menuItems", menuItems);
 
         // Проверяем, является ли пользователь администратором
-        boolean isAdmin = authentication != null && authentication.getAuthorities()
-                .stream()
-                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
 
+        String role = authentication != null ? authentication.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .findFirst()
+                .orElse("GUEST") : "GUEST";  // Если не аутентифицирован, то роль GUEST
+
+        // Передаем роль в модель
+        model.addAttribute("role", role);
+
+        boolean isAdmin = role.equals("ROLE_COOK") || role.equals("ROLE_ADMIN");;
         model.addAttribute("isAdmin", isAdmin);
 
         return "menu";

@@ -7,6 +7,7 @@ import com.restaurant.repositories.MenuRepository;
 import com.restaurant.repositories.OrdersRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -52,10 +53,15 @@ public class OrdersController {
         model.addAttribute("ordersJson", ordersJson);
         model.addAttribute("menuTypes", menuTypes);
 
-        boolean isAdmin = authentication != null && authentication.getAuthorities()
+        String role = authentication != null ? authentication.getAuthorities()
                 .stream()
-                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+                .map(GrantedAuthority::getAuthority)
+                .findFirst()
+                .orElse("GUEST") : "GUEST";  // Если не аутентифицирован, то роль GUEST
 
+        // Передаем роль в модель
+        model.addAttribute("role", role);
+        boolean isAdmin = role.equals("ROLE_WAITER") || role.equals("ROLE_ADMIN");
         model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("menuItems", menuItems);
 

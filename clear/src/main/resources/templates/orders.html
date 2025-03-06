@@ -360,11 +360,14 @@
 <nav>
     <ul>
         <li><a href="/" class="home-button">Главная</a></li>
+        <li><a href="/about">Об авторе</a></li>
         <li><a href="/menu">Меню</a></li>
         <li><a href="/reserve">Брони</a></li>
-        <li><a href="/recipes" th:if="${isAdmin}">Рецепты</a></li>
-        <li><a href="/stock" th:if="${isAdmin}">Склад</a></li>
-        <li><a href="/orders" class="active" th:if="${isAdmin}">Заказы</a></li>
+        <li><a href="/recipes" th:if="${role == 'ROLE_COOK'}">Рецепты</a></li>
+        <li><a href="/stock" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK'}">Склад</a></li>
+        <li><a href="/statistics" th:if="${role == 'ROLE_MANAGER'}">Статистика</a></li>
+        <li><a href="/orders" class="active" th:if="${role == 'ROLE_WAITER'}">Заказы</a></li>
+        <li><a href="/logout" th:if="${role != 'GUEST'}">Выход</a></li>
     </ul>
 </nav>
 

@@ -12,6 +12,7 @@ import com.restaurant.repositories.ServiceRepository;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -63,9 +64,18 @@ public class ReservationsController {
         model.addAttribute("servicesJson", objectMapper.writeValueAsString(services));
 
         // Проверяем, является ли пользователь админом
-        boolean isAdmin = authentication != null && authentication.getAuthorities()
+        String role = authentication != null ? authentication.getAuthorities()
                 .stream()
-                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+                .map(GrantedAuthority::getAuthority)
+                .findFirst()
+                .orElse("GUEST") : "GUEST";  // Если не аутентифицирован, то роль GUEST
+
+        // Передаем роль в модель
+        model.addAttribute("role", role);
+
+        System.out.println(role);
+
+        boolean isAdmin = role.equals("ROLE_WAITER") || role.equals("ROLE_ADMIN");
         model.addAttribute("isAdmin", isAdmin);
 
         if (isAdmin) {

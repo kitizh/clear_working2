@@ -8,6 +8,7 @@ import com.restaurant.repositories.AllItemsRepository;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -65,10 +66,17 @@ public class StockController {
         // Передаём карту allItemsMap как JSON для JS
         model.addAttribute("allItemsJson", objectMapper.writeValueAsString(allItemsMap));
 
-        boolean isAdmin = authentication != null && authentication.getAuthorities()
+        String role = authentication != null ? authentication.getAuthorities()
                 .stream()
-                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+                .map(GrantedAuthority::getAuthority)
+                .findFirst()
+                .orElse("GUEST") : "GUEST";  // Если не аутентифицирован, то роль GUEST
 
+        // Передаем роль в модель
+        model.addAttribute("role", role);
+
+        System.out.println(role);
+        boolean isAdmin = role.equals("ROLE_MANAGER") || role.equals("ROLE_ADMIN") || role.equals("ROLE_COOK");
         model.addAttribute("isAdmin", isAdmin);
 
         return "stock";

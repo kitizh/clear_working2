@@ -10,6 +10,7 @@ import com.restaurant.repositories.RecipeRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -57,13 +58,41 @@ public class RecipeController {
         Map<String, Long> dishMenuMap = recipes.stream()
                 .collect(Collectors.toMap(r -> r.getMenu().getDishName(), r -> r.getMenu().getMenuId(), (a, b) -> a));
 
+
+
         model.addAttribute("recipesByType", recipesByType);
         model.addAttribute("ingredientsByDish", ingredientsByDish);
-        model.addAttribute("menuTypes", recipesByType.keySet());
         model.addAttribute("dishMenuMap", dishMenuMap);
 
-        boolean isAdmin = authentication != null && authentication.getAuthorities()
-                .stream().anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+
+
+        List<String> menuTypes = menuRepository.findAll().stream()
+                .map(Menu::getMenuType)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // Создаём карту <Тип блюда, Список блюд>
+        Map<String, List<Menu>> menuItems = new HashMap<>();
+        for (String type : menuTypes) {
+            List<Menu> dishes = menuRepository.findByMenuType(type);
+            menuItems.put(type, dishes);
+        }
+
+        model.addAttribute("menuTypes", menuTypes);
+        model.addAttribute("menuItems", menuItems);
+
+        String role = authentication != null ? authentication.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .findFirst()
+                .orElse("GUEST") : "GUEST";  // Если не аутентифицирован, то роль GUEST
+
+        // Передаем роль в модель
+        model.addAttribute("role", role);
+
+        System.out.println(role);
+
+        boolean isAdmin = role.equals("ROLE_COOK") || role.equals("ROLE_ADMIN");
         model.addAttribute("isAdmin", isAdmin);
 
         // Для выпадающего списка типов продуктов используем уникальные типы из all_items

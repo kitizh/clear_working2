@@ -56,9 +56,14 @@
 <nav>
     <ul>
         <li><a href="/" class="home-button">Главная</a></li>
+        <li><a href="/about">Об авторе</a></li>
         <li><a href="/menu">Меню</a></li>
-        <li><a href="/orders">Заказы</a></li>
-        <li><a href="/reserve" class="active">Брони</a></li>
+        <li><a href="/reserve" class="active" >Брони</a></li>
+        <li><a href="/recipes" th:if="${role == 'ROLE_COOK'}">Рецепты</a></li>
+        <li><a href="/stock" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK'}">Склад</a></li>
+        <li><a href="/statistics" th:if="${role == 'ROLE_MANAGER'}">Статистика</a></li>
+        <li><a href="/orders" th:if="${role == 'ROLE_WAITER'}">Заказы</a></li>
+        <li><a href="/logout" th:if="${role != 'GUEST'}">Выход</a></li>
     </ul>
 </nav>
 
@@ -200,11 +205,25 @@
             const cellA = rowA.cells[columnIndex].textContent.trim();
             const cellB = rowB.cells[columnIndex].textContent.trim();
 
-            if (direction === 'asc') {
-                return cellA > cellB ? 1 : -1;
-            } else {
-                return cellA < cellB ? 1 : -1;
+            let comparisonResult = 0;
+
+            if (columnIndex === 0) {  // Сортировка по ID (число)
+                const idA = parseInt(cellA, 10);
+                const idB = parseInt(cellB, 10);
+                comparisonResult = idA - idB; // Сортировка по возрастанию
+            } else if (columnIndex === 4) {  // Сортировка по номеру телефона (число)
+                const phoneA = cellA.replace(/\D/g, '');  // Убираем все нецифровые символы
+                const phoneB = cellB.replace(/\D/g, '');
+                comparisonResult = phoneA - phoneB;
+            } else if (columnIndex === 2) {  // Сортировка по дате (используем Date)
+                const dateA = new Date(cellA);
+                const dateB = new Date(cellB);
+                comparisonResult = dateA - dateB; // Сортировка по времени
+            } else {  // Лексикографическая сортировка (например, для имени)
+                comparisonResult = cellA.localeCompare(cellB);
             }
+
+            return direction === 'asc' ? comparisonResult : -comparisonResult;
         });
 
         // Сортируем и обновляем таблицу
@@ -226,6 +245,7 @@
         arrow.textContent = direction === 'asc' ? '↑' : '↓';
         th.appendChild(arrow);
     }
+
 
     document.addEventListener('DOMContentLoaded', () => {
         // Обработчик изменения столика или даты

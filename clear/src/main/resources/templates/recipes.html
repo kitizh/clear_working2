@@ -64,11 +64,14 @@
 <nav>
     <ul>
         <li><a href="/" class="home-button">Главная</a></li>
+        <li><a href="/about">Об авторе</a></li>
         <li><a href="/menu">Меню</a></li>
         <li><a href="/reserve">Брони</a></li>
-        <li><a href="/recipes" class="active" th:if="${isAdmin}">Рецепты</a></li>
-        <li><a href="/stock" th:if="${isAdmin}">Склад</a></li>
-        <li><a href="/orders" th:if="${isAdmin}">Заказы</a></li>
+        <li><a href="/recipes" class="active" th:if="${role == 'ROLE_COOK'}">Рецепты</a></li>
+        <li><a href="/stock" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK'}">Склад</a></li>
+        <li><a href="/statistics" th:if="${role == 'ROLE_MANAGER'}">Статистика</a></li>
+        <li><a href="/orders" th:if="${role == 'ROLE_WAITER'}">Заказы</a></li>
+        <li><a href="/logout" th:if="${role != 'GUEST'}">Выход</a></li>
     </ul>
 </nav>
 
@@ -88,10 +91,10 @@
     <!-- Для каждого типа создаём отдельный блок с рецептами -->
     <div th:each="type : ${menuTypes}" th:id="${type}" class="tab-content" style="display: none;">
         <ul class="recipe-list">
-            <li th:each="dishName : ${recipesByType.get(type)}" class="name-and-table">
+            <li th:each="dish : ${menuItems.get(type)}" class="name-and-table">
                 <!-- Скрытое поле с menuId для данного блюда -->
-                <input type="hidden" class="menu-id" th:value="${dishMenuMap[dishName]}"/>
-                <span class="recipe-name" th:text="${dishName}" style="cursor: pointer; font-weight: bold;"></span>
+                <input type="hidden" class="menu-id" th:value="${dishMenuMap[dish.dishName]}"/>
+                <span class="recipe-name" th:text="${dish.dishName}" style="cursor: pointer; font-weight: bold;"></span>
 
                 <!-- Таблица ингредиентов (изначально скрыта) -->
                 <table class="ingredients-table menu-table">
@@ -110,16 +113,16 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="recipe : ${ingredientsByDish.get(dishName)}"
+                    <tr th:each="recipe : ${ingredientsByDish.get(dish.dishName)}"
                         class="recipe-row" th:attr="data-recipe-id=${recipe.recipeId}, data-menu-id=${recipe.menu.menuId}">
-                        <td class="item editable" th:text="${recipe.item.itemName}"></td>
+                        <td class="item" th:text="${recipe.item.itemName}"></td>
                         <td class="amount editable" th:text="${recipe.amount}"></td>
-                        <td class="unit editable" th:text="${recipe.unit}"></td>
+                        <td class="unit" th:text="${recipe.unit}"></td>
                         <td th:if="${isAdmin}" class="actions-column">
                             <button class="delete-btn" style="display: none;">Delete</button>
                         </td>
                     </tr>
-                    <tr th:if="${ingredientsByDish.get(dishName) == null or #lists.isEmpty(ingredientsByDish.get(dishName))}"
+                    <tr th:if="${ingredientsByDish.get(dish.dishName) == null or #lists.isEmpty(ingredientsByDish.get(dish.dishName))}"
                         class="no-ingredients">
                         <td colspan="3">Ингредиентов пока нет</td>
                     </tr>
@@ -163,7 +166,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         let isEditing = false;
-        const recipeUnits = ["kg", "g", "L", "ml", "tsp", "tbsp", "pcs"];
+        const recipeUnits = ["г", "мг", "мл"];
 
         function toggleEditMode() {
             isEditing = !isEditing;
@@ -410,9 +413,9 @@
                             newRow.className = "recipe-row";
                             newRow.dataset.recipeId = addedIngredient.recipeId;
                             newRow.innerHTML = `
-                    <td class="item editable">${addedIngredient.item.itemName}</td>
+                    <td class="item">${addedIngredient.item.itemName}</td>
                     <td class="amount editable">${addedIngredient.amount}</td>
-                    <td class="unit editable">${addedIngredient.unit}</td>
+                    <td class="unit">${addedIngredient.unit}</td>
                     <td class="actions-column">
                       <button class="delete-btn" style="display: none;">Delete</button>
                     </td>
