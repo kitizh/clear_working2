@@ -17,9 +17,6 @@ public class Stock {
     @Column(nullable = false)
     private Double amount;
 
-    @Column(nullable = false, length = 20)
-    private String unit; // Строковое поле
-
     public Long getStockId() {
         return stockId;
     }
@@ -44,11 +41,4 @@ public class Stock {
         this.amount = amount;
     }
 
-    public String getUnit() {
-        return unit;
-    }
-
-    public void setUnit(String unit) {
-        this.unit = unit;
-    }
 }

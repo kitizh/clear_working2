@@ -2,9 +2,10 @@ package com.restaurant.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.entities.*;
-import com.restaurant.repositories.AllTablesRepository;
-import com.restaurant.repositories.MenuRepository;
-import com.restaurant.repositories.OrdersRepository;
+import com.restaurant.repositories.*;
+import jakarta.transaction.Transactional;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -12,8 +13,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.*;
 
 @Controller
@@ -24,12 +23,18 @@ public class OrdersController {
     private final AllTablesRepository allTablesRepository;
     private final MenuRepository menuRepository;
     private final ObjectMapper objectMapper;
+    private final StockRepository stockRepository;
+    private final RecipeRepository recipeRepository;
+    private final OrderItemRepository orderItemRepository;
 
-    public OrdersController(OrdersRepository ordersRepository, AllTablesRepository allTablesRepository, MenuRepository menuRepository, ObjectMapper objectMapper) {
+    public OrdersController(OrderItemRepository orderItemRepository, RecipeRepository recipeRepository ,StockRepository stockRepository ,OrdersRepository ordersRepository, AllTablesRepository allTablesRepository, MenuRepository menuRepository, ObjectMapper objectMapper) {
         this.ordersRepository = ordersRepository;
         this.allTablesRepository = allTablesRepository;
         this.menuRepository = menuRepository;
         this.objectMapper = objectMapper;
+        this.stockRepository = stockRepository;
+        this.recipeRepository = recipeRepository;
+        this.orderItemRepository = orderItemRepository;
     }
 
     @GetMapping
@@ -96,24 +101,9 @@ public class OrdersController {
         Orders newOrder = new Orders();
         Integer tableId = Integer.parseInt(payload.get("allTables"));
         String description = payload.get("description");
-
-        if (description == null || description.isEmpty()) {
-            newOrder.setDescription("-");
-        } else {
-            newOrder.setDescription(description);
-        }
-
-        // Устанавливаем дату и время для заказа
-        String orderDateStr = payload.get("orderDate");
-        String orderTimeStr = payload.get("orderTime");
-
-        newOrder.setOrderDate(LocalDate.parse(orderDateStr));  // Устанавливаем дату
-        newOrder.setOrderTime(LocalTime.parse(orderTimeStr));  // Устанавливаем время
-
         AllTables table = allTablesRepository.findById(tableId).orElse(null);
         newOrder.setAllTables(table);
-        newOrder.setTotalAmount(newOrder.getTotalAmount());
-        newOrder.setStatus("Принят");
+        newOrder.setDescription(description);
 
         Orders savedOrder = ordersRepository.save(newOrder);
 

@@ -118,7 +118,6 @@ public class RecipeController {
             Recipe recipe = recipeRepository.findById(updatedRecipe.getRecipeId())
                     .orElseThrow(() -> new NoSuchElementException("Recipe not found"));
             recipe.setAmount(updatedRecipe.getAmount());
-            recipe.setUnit(updatedRecipe.getUnit());
             recipeRepository.save(recipe);
         }
         return ResponseEntity.ok().build();
@@ -142,13 +141,11 @@ public class RecipeController {
         String productType = payload.get("productType");
         String itemName = payload.get("itemName");
         String amountStr = payload.get("amount");
-        String unit = payload.get("unit");
 
         if (menuIdStr == null || menuIdStr.trim().isEmpty() ||
                 productType == null || productType.trim().isEmpty() ||
                 itemName == null || itemName.trim().isEmpty() ||
-                amountStr == null || amountStr.trim().isEmpty() ||
-                unit == null || unit.trim().isEmpty()) {
+                amountStr == null || amountStr.trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
         Long menuId = Long.parseLong(menuIdStr);
@@ -172,7 +169,6 @@ public class RecipeController {
         recipe.setMenu(menu);
         recipe.setItem(item);
         recipe.setAmount(amount);
-        recipe.setUnit(unit);
         Recipe saved = recipeRepository.save(recipe);
         return ResponseEntity.ok(saved);
     }

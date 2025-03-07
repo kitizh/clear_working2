@@ -12,23 +12,33 @@ public class Orders {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long orderId;
 
-    // В БД это DATE и TIME
-    @Column(name = "order_date")
+    @Column(nullable = false, columnDefinition = "DATE DEFAULT CURRENT_DATE")
     private LocalDate orderDate;
 
-    @Column(name = "order_time")
+    @Column(nullable = false, columnDefinition = "TIME DEFAULT CURRENT_TIME")
     private LocalTime orderTime;
 
-    // Связь с таблицей all_tables по столбцу table_number.
     @ManyToOne
-    @JoinColumn(name = "table_number")
+    @JoinColumn(name = "table_number", referencedColumnName = "id", nullable = true)
     private AllTables allTables;
 
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
     private Double totalAmount;
+
+    @Column(nullable = false, columnDefinition = "VARCHAR(10) DEFAULT 'Принят'")
     private String status;
+
+    @Column(nullable = false, columnDefinition = "TEXT DEFAULT '-'")
     private String description;
 
+    // Конструктор с дефолтными значениями
     public Orders() {
+        this.orderDate = LocalDate.now();  // Значение по умолчанию: текущая дата
+        this.orderTime = LocalTime.now();  // Значение по умолчанию: текущее время
+        this.totalAmount = 0.0;           // Значение по умолчанию: 0
+        this.status = "Принят";           // Значение по умолчанию: "Принят"
+        this.description = "-";           // Значение по умолчанию: "-"
+        this.allTables = null;            // Можно оставить null, если столик не задан
     }
 
     // Геттеры и сеттеры

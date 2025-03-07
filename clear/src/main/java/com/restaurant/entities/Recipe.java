@@ -22,9 +22,6 @@ public class Recipe {
     @Column(nullable = false)
     private Double amount;
 
-    @Column(nullable = false)
-    private String unit;
-
     public Long getRecipeId() {
         return recipeId;
     }
@@ -49,10 +46,5 @@ public class Recipe {
     public void setAmount(Double amount) {
         this.amount = amount;
     }
-    public String getUnit() {
-        return unit;
-    }
-    public void setUnit(String unit) {
-        this.unit = unit;
-    }
+
 }

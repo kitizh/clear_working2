@@ -40,9 +40,32 @@
             margin-bottom: 5px;
         }
 
-        #serviceCheckboxes div {
-            margin-bottom: 5px;
+        .form-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
         }
+
+        .form-row label {
+            margin-right: 20px;
+            font-weight: bold;
+        }
+
+        #serviceCheckboxes {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        #serviceCheckboxes div {
+            margin-right: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        #serviceCheckboxes input {
+            margin-right: 5px;
+        }
+
     </style>
 
     <script type="application/json" id="servicesJson" th:utext="${servicesJson}"></script>
@@ -54,12 +77,13 @@
         <li><a href="/" class="home-button">Главная</a></li>
         <li><a href="/about">Об авторе</a></li>
         <li><a href="/menu">Меню</a></li>
-        <li><a href="/reserve" class="active" >Брони</a></li>
-        <li><a href="/recipes" th:if="${role == 'ROLE_COOK'}">Рецепты</a></li>
-        <li><a href="/stock" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK'}">Склад</a></li>
-        <li><a href="/statistics" th:if="${role == 'ROLE_MANAGER'}">Статистика</a></li>
-        <li><a href="/orders" th:if="${role == 'ROLE_WAITER'}">Заказы</a></li>
+        <li><a href="/reserve"  class="active" th:if="${role != 'GUEST'}">Брони</a></li>
+        <li><a href="/recipes" th:if="${role == 'ROLE_COOK' or role == 'ROLE_ADMIN'}">Рецепты</a></li>
+        <li><a href="/stock" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK' or role == 'ROLE_ADMIN'}">Склад</a></li>
+        <li><a href="/statistics" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_ADMIN'}">Статистика</a></li>
+        <li><a href="/orders" th:if="${role == 'ROLE_WAITER' or role == 'ROLE_ADMIN'}">Заказы</a></li>
         <li><a href="/logout" th:if="${role != 'GUEST'}">Выход</a></li>
+        <li><a href="/login" th:if="${role == 'GUEST'}">Вход</a></li>
     </ul>
 </nav>
 
@@ -183,6 +207,20 @@
             </tr>
             </tbody>
         </table>
+
+        <h3>Услуги для брони #<span id="currentResId"></span></h3>
+        <ul id="serviceList" class="services-list">
+            <li>Ничего не выбрано</li>
+        </ul>
+
+        <div>
+            <label>Добавить услуги:</label>
+            <select id="adminServiceSelect" multiple size="4" style="width: 200px;">
+                <option th:each="srv : ${services}" th:value="${srv.id}" th:text="${srv.serviceName}"></option>
+            </select>
+            <button id="addServicesBtn">Add Services</button>
+        </div>
+
     </div>
 
 

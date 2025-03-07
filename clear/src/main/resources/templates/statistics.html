@@ -4,6 +4,31 @@
     <meta charset="UTF-8">
     <title>Menu</title>
     <link rel="stylesheet" th:href="@{/css/menu.css}">
+    <style>
+        .statistic {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .statistic strong {
+            font-size: 16px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .statistic ul {
+            padding-left: 20px;
+        }
+
+        .statistic ul li {
+            list-style-type: disc;
+            margin-bottom: 5px;
+        }
+
+    </style>
 </head>
 <body>
 
@@ -12,12 +37,13 @@
         <li><a href="/" class="home-button">Главная</a></li>
         <li><a href="/about">Об авторе</a></li>
         <li><a href="/menu">Меню</a></li>
-        <li><a href="/reserve">Брони</a></li>
-        <li><a href="/recipes" th:if="${role == 'ROLE_COOK'}">Рецепты</a></li>
-        <li><a href="/stock" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK'}">Склад</a></li>
-        <li><a href="/statistics" class="active" th:if="${role == 'ROLE_MANAGER'}">Статистика</a></li>
-        <li><a href="/orders" th:if="${role == 'ROLE_WAITER'}">Заказы</a></li>
+        <li><a href="/reserve" th:if="${role != 'GUEST'}">Брони</a></li>
+        <li><a href="/recipes" th:if="${role == 'ROLE_COOK' or role == 'ROLE_ADMIN'}">Рецепты</a></li>
+        <li><a href="/stock" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK' or role == 'ROLE_ADMIN'}">Склад</a></li>
+        <li><a href="/statistics"  class="active" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_ADMIN'}">Статистика</a></li>
+        <li><a href="/orders" th:if="${role == 'ROLE_WAITER' or role == 'ROLE_ADMIN'}">Заказы</a></li>
         <li><a href="/logout" th:if="${role != 'GUEST'}">Выход</a></li>
+        <li><a href="/login" th:if="${role == 'GUEST'}">Вход</a></li>
     </ul>
 </nav>
 
@@ -58,10 +84,19 @@
     </div>
 
     <div class="statistic">
-        <strong>Средний чек за <span th:text="${timePeriod}"></span>:</strong> <span th:text="${averageCheck}"></span> рублей
+        <strong>Средний чек за <span th:text="${timePeriod}"></span>:</strong>
+        <span id="averageCheck" th:text="${averageCheck}"></span> рублей
     </div>
 
 </div>
-
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const averageCheck = document.getElementById("averageCheck");
+        if (averageCheck) {
+            const rawAmount = parseFloat(averageCheck.textContent); // Преобразуем в число
+            averageCheck.textContent = rawAmount.toFixed(2); // Ограничиваем до двух знаков
+        }
+    });
+</script>
 </body>
 </html>

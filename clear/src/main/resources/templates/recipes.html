@@ -35,13 +35,10 @@
         }
         /* Если не в режиме редактирования, первые три колонки таблицы ингредиентов занимают 100% */
         body:not(.edit-mode) table.menu-table col:nth-child(1) {
-            width: 33.33% !important;
+            width: 60% !important;
         }
         body:not(.edit-mode) table.menu-table col:nth-child(2) {
-            width: 33.33% !important;
-        }
-        body:not(.edit-mode) table.menu-table col:nth-child(3) {
-            width: 33.33% !important;
+            width: 40% !important;
         }
         /* По умолчанию таблицы ингредиентов скрыты */
         .ingredients-table {
@@ -66,12 +63,13 @@
         <li><a href="/" class="home-button">Главная</a></li>
         <li><a href="/about">Об авторе</a></li>
         <li><a href="/menu">Меню</a></li>
-        <li><a href="/reserve">Брони</a></li>
-        <li><a href="/recipes" class="active" th:if="${role == 'ROLE_COOK'}">Рецепты</a></li>
-        <li><a href="/stock" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK'}">Склад</a></li>
-        <li><a href="/statistics" th:if="${role == 'ROLE_MANAGER'}">Статистика</a></li>
-        <li><a href="/orders" th:if="${role == 'ROLE_WAITER'}">Заказы</a></li>
+        <li><a href="/reserve" th:if="${role != 'GUEST'}">Брони</a></li>
+        <li><a href="/recipes" class="active" th:if="${role == 'ROLE_COOK' or role == 'ROLE_ADMIN'}">Рецепты</a></li>
+        <li><a href="/stock" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK' or role == 'ROLE_ADMIN'}">Склад</a></li>
+        <li><a href="/statistics" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_ADMIN'}">Статистика</a></li>
+        <li><a href="/orders" th:if="${role == 'ROLE_WAITER' or role == 'ROLE_ADMIN'}">Заказы</a></li>
         <li><a href="/logout" th:if="${role != 'GUEST'}">Выход</a></li>
+        <li><a href="/login" th:if="${role == 'GUEST'}">Вход</a></li>
     </ul>
 </nav>
 
@@ -99,16 +97,14 @@
                 <!-- Таблица ингредиентов (изначально скрыта) -->
                 <table class="ingredients-table menu-table">
                     <colgroup>
-                        <col style="width: 55%;">
-                        <col style="width: 15%;">
-                        <col style="width: 15%;">
-                        <col th:if="${isAdmin}" class="actions-col" style="width: 15%;">
+                        <col style="width: 60%;">
+                        <col style="width: 20%;">
+                        <col th:if="${isAdmin}" class="actions-col" style="width: 20%;">
                     </colgroup>
                     <thead>
                     <tr>
                         <th>Ингредиент</th>
                         <th>Количество</th>
-                        <th>Ед. изм.</th>
                         <th th:if="${isAdmin}" class="actions-column">Действия</th>
                     </tr>
                     </thead>
@@ -117,7 +113,6 @@
                         class="recipe-row" th:attr="data-recipe-id=${recipe.recipeId}, data-menu-id=${recipe.menu.menuId}">
                         <td class="item" th:text="${recipe.item.itemName}"></td>
                         <td class="amount editable" th:text="${recipe.amount}"></td>
-                        <td class="unit" th:text="${recipe.unit}"></td>
                         <td th:if="${isAdmin}" class="actions-column">
                             <button class="delete-btn" style="display: none;">Delete</button>
                         </td>
@@ -135,20 +130,13 @@
                     <select class="ingredientProductTypeSelect">
                         <option value="">Выберите тип продукта</option>
                         <option th:each="pt : ${productTypes}" th:value="${pt}" th:text="${pt}"></option>
-                        <option value="Другое">Другое</option>
                     </select>
-                    <input type="text" class="customIngredientProductType"
-                           placeholder="Введите новый тип продукта" disabled>
                     <label>Продукт:</label>
                     <select class="ingredientProductSelect">
                         <option value="">Выберите продукт</option>
                     </select>
-                    <label>Название продукта:</label>
-                    <input type="text" class="ingredientProductNameInput" placeholder="Введите название продукта">
                     <label>Количество:</label>
                     <input type="text" class="ingredientAmountInput" placeholder="Введите количество">
-                    <label>Ед. изм.:</label>
-                    <select class="ingredientUnitSelect"></select>
                     <button class="addIngredientButton">Add</button>
                 </div>
             </li>
@@ -166,7 +154,6 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         let isEditing = false;
-        const recipeUnits = ["г", "мг", "мл"];
 
         function toggleEditMode() {
             isEditing = !isEditing;
@@ -190,7 +177,6 @@
                 updatedData.push({
                     recipeId: row.dataset.recipeId,
                     amount: row.querySelector('.amount').textContent.trim(),
-                    unit: row.querySelector('.unit').textContent.trim()
                 });
             });
             fetch('/recipes/update', {
@@ -265,65 +251,41 @@
 
         // Для каждой формы добавления ингредиента
         document.querySelectorAll('.ingredient-add-form').forEach(form => {
-            // Заполняем выпадающий список единиц измерения
-            let unitSelect = form.querySelector('.ingredientUnitSelect');
-            unitSelect.innerHTML = "";
-            recipeUnits.forEach(u => {
-                let option = document.createElement("option");
-                option.value = u;
-                option.textContent = u;
-                unitSelect.appendChild(option);
-            });
-
             // Обработчик изменения типа продукта
             let productTypeSelect = form.querySelector('.ingredientProductTypeSelect');
-            let customTypeInput = form.querySelector('.customIngredientProductType');
+
             let productSelect = form.querySelector('.ingredientProductSelect');
             productTypeSelect.addEventListener("change", function() {
                 let selectedType = this.value.trim();
                 console.log("Выбран тип продукта: " + selectedType);
                 productSelect.innerHTML = "";
-                if (selectedType === "Другое" || selectedType === "") {
-                    customTypeInput.disabled = (selectedType !== "Другое");
-                } else {
-                    customTypeInput.disabled = true;
-                    customTypeInput.value = "";
-                    // Получаем данные из JSON
-                    let items = [];
-                    try {
-                        let allItems = JSON.parse(document.getElementById("allItemsJson").textContent);
-                        items = allItems[selectedType] || [];
-                        console.log("Найдено продуктов для типа '" + selectedType + "': ", items);
-                    } catch(e) {
-                        console.error("Ошибка парсинга allItemsJson", e);
-                    }
-                    items.forEach(item => {
-                        let option = document.createElement("option");
-                        option.value = item.itemId;
-                        option.textContent = item.itemName;
-                        productSelect.appendChild(option);
-                    });
-                    // Если список пуст, можно добавить опцию "Нет доступных продуктов"
-                    if(items.length === 0) {
-                        let option = document.createElement("option");
-                        option.value = "";
-                        option.textContent = "Нет доступных продуктов";
-                        productSelect.appendChild(option);
-                    }
+                // Получаем данные из JSON
+                let items = [];
+                try {
+                    let allItems = JSON.parse(document.getElementById("allItemsJson").textContent);
+                    items = allItems[selectedType] || [];
+                    console.log("Найдено продуктов для типа '" + selectedType + "': ", items);
+                } catch(e) {
+                    console.error("Ошибка парсинга allItemsJson", e);
                 }
-            });
 
-            // Обработчик выбора продукта из выпадающего списка
-            let productSelectEl = form.querySelector('.ingredientProductSelect');
-            productSelectEl.addEventListener("change", function() {
-                let selectedOption = this.options[this.selectedIndex];
-                if(selectedOption && selectedOption.value !== "") {
-                    form.querySelector('.ingredientProductNameInput').value = selectedOption.textContent;
+                items.forEach(item => {
+                    let option = document.createElement("option");
+                    option.value = item.itemId;
+                    option.textContent = item.itemName;
+                    productSelect.appendChild(option);
+                });
+                // Если список пуст, можно добавить опцию "Нет доступных продуктов"
+                if(items.length === 0) {
+                    let option = document.createElement("option");
+                    option.value = "";
+                    option.textContent = "Нет доступных продуктов";
+                    productSelect.appendChild(option);
                 }
+
             });
         });
 
-        // Обработчик кнопок добавления ингредиента
         // Обработчик кнопки добавления ингредиента
         document.querySelectorAll('.addIngredientButton').forEach(btn => {
             btn.addEventListener("click", function() {
@@ -333,26 +295,24 @@
 
                 let selectedType = form.querySelector('.ingredientProductTypeSelect').value.trim();
                 let productType;
-                if (selectedType === "Другое") {
-                    productType = form.querySelector('.customIngredientProductType').value.trim();
-                    if (productType === "") {
-                        alert("Введите новый тип продукта");
-                        return;
-                    }
-                } else {
-                    productType = selectedType;
+                productType = selectedType;
+
+                let productSelectEl = form.querySelector('.ingredientProductSelect');
+                let selectedName;
+                let selectedOption = productSelectEl.options[productSelectEl.selectedIndex];
+                if(selectedOption && selectedOption.value !== "") {
+                    selectedName = selectedOption.textContent;
                 }
-                let productName = form.querySelector('.ingredientProductNameInput').value.trim();
-                if (productName === "") {
-                    alert("Введите название продукта");
-                    return;
-                }
+
+
+                let productName;
+                productName = selectedName;
+
                 let amount = form.querySelector('.ingredientAmountInput').value.trim();
                 if (amount === "") {
                     alert("Введите количество");
                     return;
                 }
-                let unit = form.querySelector('.ingredientUnitSelect').value;
                 let ingredientsTable = this.closest('.name-and-table').querySelector('.ingredients-table');
                 let existingRow = null;
                 if (ingredientsTable) {
@@ -373,7 +333,6 @@
                     let updatePayload = [{
                         recipeId: existingRow.dataset.recipeId,
                         amount: newAmount,
-                        unit: unit
                     }];
                     fetch('/recipes/update', {
                         method: 'POST',
@@ -390,7 +349,6 @@
                         productType: productType,
                         itemName: productName,
                         amount: amount,
-                        unit: unit
                     };
                     fetch('/recipes/ingredient/add', {
                         method: 'POST',
@@ -415,7 +373,6 @@
                             newRow.innerHTML = `
                     <td class="item">${addedIngredient.item.itemName}</td>
                     <td class="amount editable">${addedIngredient.amount}</td>
-                    <td class="unit">${addedIngredient.unit}</td>
                     <td class="actions-column">
                       <button class="delete-btn" style="display: none;">Delete</button>
                     </td>
@@ -428,12 +385,10 @@
                 }
                 // Сброс полей формы
                 form.querySelector('.ingredientProductTypeSelect').value = "";
-                form.querySelector('.customIngredientProductType').value = "";
-                form.querySelector('.customIngredientProductType').disabled = true;
                 form.querySelector('.ingredientProductSelect').innerHTML = "<option value=''>Выберите продукт</option>";
+                form.querySelector('.ingredientProductSelect').value = "";
                 form.querySelector('.ingredientProductNameInput').value = "";
                 form.querySelector('.ingredientAmountInput').value = "";
-                form.querySelector('.ingredientUnitSelect').selectedIndex = 0;
             });
         });
 

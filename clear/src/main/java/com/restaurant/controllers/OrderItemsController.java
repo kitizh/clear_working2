@@ -1,11 +1,7 @@
 package com.restaurant.controllers;
 
-import com.restaurant.entities.Menu;
-import com.restaurant.entities.Orders;
-import com.restaurant.entities.OrderItem;
-import com.restaurant.repositories.MenuRepository;
-import com.restaurant.repositories.OrderItemRepository;
-import com.restaurant.repositories.OrdersRepository;
+import com.restaurant.entities.*;
+import com.restaurant.repositories.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,13 +13,17 @@ public class OrderItemsController {
     private final OrderItemRepository orderItemRepository;
     private final OrdersRepository orderRepository;
     private final MenuRepository menuRepository;
+    private final RecipeRepository recipeRepository;
+    private final StockRepository stockRepository;
 
     public OrderItemsController(OrderItemRepository orderItemRepository,
                                 OrdersRepository orderRepository,
-                                MenuRepository menuRepository) {
+                                MenuRepository menuRepository, RecipeRepository recipeRepository, StockRepository stockRepository) {
         this.orderItemRepository = orderItemRepository;
         this.orderRepository = orderRepository;
         this.menuRepository = menuRepository;
+        this.recipeRepository = recipeRepository;
+        this.stockRepository = stockRepository;
     }
 
     // GET /orders/{orderId}/items
@@ -45,26 +45,56 @@ public class OrderItemsController {
         return result;
     }
 
+    // Проверка, есть ли достаточно ингредиентов на складе
+    public boolean isIngredientAvailable(Long menuId) {
+        // Получаем список рецептов для выбранного блюда
+        List<Recipe> recipes = recipeRepository.findByMenuMenuId(menuId);
 
-    // POST /orders/{orderId}/items/add
-    // Добавляет новый элемент заказа к заказу с id orderId.
-    // Ожидается JSON с полями: menuId и description.
+        // Проходим по каждому рецепту и проверяем наличие ингредиента на складе
+        for (Recipe recipe : recipes) {
+            AllItems ingredient = recipe.getItem(); // Получаем ингредиент из рецепта
+            Double requiredAmount = recipe.getAmount(); // Получаем количество ингредиента, необходимое для блюда
+
+            // Ищем соответствующий ингредиент на складе
+            Stock stock = stockRepository.findByItemItemId(ingredient.getItemId());
+
+            if (stock == null || stock.getAmount() < requiredAmount) {
+                return false; // Если ингредиента недостаточно, возвращаем false
+            }
+        }
+        return true; // Если все ингредиенты есть в нужном количестве
+    }
+
+
     @PostMapping("/orders/{orderId}/items/add")
     @ResponseBody
     public Map<String, Object> addOrderItem(@PathVariable Long orderId, @RequestBody Map<String, String> payload) {
         Long menuId = Long.parseLong(payload.get("menuId"));
         String description = payload.get("description");
+
         if (description == null || description.trim().isEmpty()) {
             description = "-";
         }
+
+        // Проверка наличия ингредиентов
+        if (!isIngredientAvailable(menuId)) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", true);
+            errorResponse.put("message", "Недостаточно ингредиентов на складе для выбранного блюда");
+            return errorResponse;  // Отправляем сообщение об ошибке
+        }
+
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid order id"));
+
         Menu menu = menuRepository.findById(menuId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid menu id"));
+
         OrderItem orderItem = new OrderItem();
         orderItem.setOrder(order);
         orderItem.setMenu(menu);
         orderItem.setDescription(description);
+
         OrderItem savedItem = orderItemRepository.save(orderItem);
 
         Map<String, Object> response = new HashMap<>();
@@ -74,6 +104,7 @@ public class OrderItemsController {
         response.put("description", savedItem.getDescription());
         return response;
     }
+
 
 
     // POST /orders/{orderId}/items/delete/{orderItemId}

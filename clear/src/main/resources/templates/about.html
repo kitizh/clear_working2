@@ -12,12 +12,13 @@
         <li><a href="/" class="home-button">Главная</a></li>
         <li><a href="/about" class="active" >Об авторе</a></li>
         <li><a href="/menu">Меню</a></li>
-        <li><a href="/reserve">Брони</a></li>
-        <li><a href="/recipes" th:if="${role == 'ROLE_COOK'}">Рецепты</a></li>
-        <li><a href="/stock" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK'}">Склад</a></li>
-        <li><a href="/statistics" th:if="${role == 'ROLE_MANAGER'}">Статистика</a></li>
-        <li><a href="/orders" th:if="${role == 'ROLE_WAITER'}">Заказы</a></li>
+        <li><a href="/reserve"  th:if="${role != 'GUEST'}">Брони</a></li>
+        <li><a href="/recipes" th:if="${role == 'ROLE_COOK' or role == 'ROLE_ADMIN'}">Рецепты</a></li>
+        <li><a href="/stock" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK' or role == 'ROLE_ADMIN'}">Склад</a></li>
+        <li><a href="/statistics" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_ADMIN'}">Статистика</a></li>
+        <li><a href="/orders" th:if="${role == 'ROLE_WAITER' or role == 'ROLE_ADMIN'}">Заказы</a></li>
         <li><a href="/logout" th:if="${role != 'GUEST'}">Выход</a></li>
+        <li><a href="/login" th:if="${role == 'GUEST'}">Вход</a></li>
     </ul>
 </nav>
 

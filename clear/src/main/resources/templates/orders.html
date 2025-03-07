@@ -102,7 +102,7 @@
                                 <td>${item.price}</td>
                                 <td>${item.description}</td>
                                 <td class="actions-column">
-                                    <button class="delete-item-btn" style="display: none;">Delete</button>
+                                    <button class="delete-item-btn" style="display: button;">Delete</button>
                                 </td>
                             `;
                             row.querySelector('.delete-item-btn').addEventListener('click', function () {
@@ -129,7 +129,6 @@
         function sortTable(columnIndex) {
             const table = document.querySelector('.menu-table tbody');
             const rows = Array.from(table.rows);
-            const currentColumn = table.querySelectorAll('th')[columnIndex];
 
             // Проверяем направление сортировки
             const direction = currentSortColumn === columnIndex && currentSortDirection === 'asc' ? 'desc' : 'asc';
@@ -137,11 +136,25 @@
                 const cellA = rowA.cells[columnIndex].textContent.trim();
                 const cellB = rowB.cells[columnIndex].textContent.trim();
 
-                if (direction === 'asc') {
-                    return cellA > cellB ? 1 : -1;
-                } else {
-                    return cellA < cellB ? 1 : -1;
+                let comparisonResult = 0;
+
+                if (columnIndex === 0) {  // Сортировка по ID (число)
+                    const idA = parseInt(cellA, 10);
+                    const idB = parseInt(cellB, 10);
+                    comparisonResult = idA - idB; // Сортировка по возрастанию
+                } else if (columnIndex === 3) {  // Сортировка по сумме заказа (число)
+                    const priceA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));  // Убираем все символы кроме цифр и точки
+                    const priceB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
+                    comparisonResult = priceA - priceB; // Сортировка по числовому значению
+                } else if (columnIndex === 2) {  // Сортировка по дате (используем Date)
+                    const dateA = new Date(cellA);
+                    const dateB = new Date(cellB);
+                    comparisonResult = dateA - dateB; // Сортировка по времени
+                } else {  // Лексикографическая сортировка (например, для имени)
+                    comparisonResult = cellA.localeCompare(cellB);
                 }
+
+                return direction === 'asc' ? comparisonResult : -comparisonResult;
             });
 
             // Сортируем и обновляем таблицу
@@ -164,9 +177,11 @@
             th.appendChild(arrow);
         }
 
-        document.addEventListener('DOMContentLoaded', function () {
-            let isEditing = false;
 
+        document.addEventListener('DOMContentLoaded', function () {
+
+            let isEditing = false;
+            let isAddingItem = false;
             function toggleEditMode() {
                 isEditing = !isEditing;
                 document.querySelectorAll('.editable').forEach(cell => {
@@ -232,26 +247,17 @@
             // Форма добавления нового заказа через AJAX
             document.getElementById("addOrderButton")?.addEventListener("click", function () {
                 let tableSelect = document.getElementById("tableSelect");
-                let orderDateInput = document.getElementById("orderDate");
-                let orderTimeInput = document.getElementById("orderTime");
+
                 let descriptionInput = document.getElementById("orderDescription");
                 let tableId = tableSelect.value;
-                let orderDate = orderDateInput.value;
-                let orderTime = orderTimeInput.value;
+
                 let description = descriptionInput.value.trim();
-                if (!orderDate || !orderTime) {
-                    alert("Введите дату и время заказа");
-                    return;
-                }
                 if (description === "") {
-                    alert("Введите описание заказа");
-                    return;
+                    description = "-"
                 }
                 let newOrder = {
                     allTables: tableId,
-                    description: description,
-                    orderDate: orderDate,
-                    orderTime: orderTime
+                    description: description
                 };
                 fetch('/orders/add', {
                     method: 'POST',
@@ -283,11 +289,62 @@
                         tbody.appendChild(newRow);
                         descriptionInput.value = "";
                         tableSelect.selectedIndex = 0;
-                        orderDateInput.value = "";
-                        orderTimeInput.value = "";
                         fetchOrderItems(addedOrder.orderId);
                     })
                     .catch(error => alert(error.message));
+            });
+            document.getElementById("addOrderItemButton")?.addEventListener("click", function() {
+                if (isAddingItem) return;  // Если запрос уже выполняется, не выполняем новый запрос
+                isAddingItem = true;  // Устанавливаем флаг
+
+                let currentOrderId = document.getElementById("currentOrderId").textContent.trim();
+                if (!currentOrderId) {
+                    alert("Сначала выберите заказ");
+                    isAddingItem = false;  // Сбрасываем флаг
+                    return;
+                }
+
+                let dishSelect = document.getElementById("dishSelect");
+                let selectedDishId = dishSelect.value;
+                if (!selectedDishId) {
+                    alert("Выберите блюдо");
+                    isAddingItem = false;  // Сбрасываем флаг
+                    return;
+                }
+
+                let description = document.getElementById("orderItemDescription").value.trim();
+                if (description === "") description = "-";
+
+                let newItem = { menuId: selectedDishId, description: description };
+
+                fetch(`/orders/${currentOrderId}/items/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newItem)
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка при добавлении элемента заказа');
+                        return response.json();
+                    })
+                    .then(addedItem => {
+                        // Если пришел ответ с ошибкой
+                        if (addedItem.error) {
+                            alert(addedItem.message);  // Показать сообщение об ошибке
+                        } else {
+                            fetchOrderItems(currentOrderId);  // Обновляем элементы заказа
+                            document.getElementById("dishTypeSelect").value = "";
+                            document.getElementById("dishSelect").innerHTML = "<option value=''>Выберите блюдо</option>";
+                            document.getElementById("orderItemDescription").value = "-";
+                        }
+                        isAddingItem = false;  // Сбрасываем флаг
+                    })
+                    .catch(error => {
+                        alert(error.message);
+                        isAddingItem = false;  // Сбрасываем флаг в случае ошибки
+                    });
+            });
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.style.display = isEditing ? "inline-block" : "none";
             });
 
             // При загрузке страницы отображаем OrderItems для последнего заказа (если он есть)
@@ -321,38 +378,29 @@
                 th.addEventListener('click', () => sortTable(index));
             });
 
-            document.getElementById("addOrderItemButton")?.addEventListener("click", function() {
-                let currentOrderId = document.getElementById("currentOrderId").textContent.trim();
-                if (!currentOrderId) {
-                    alert("Сначала выберите заказ");
-                    return;
-                }
-                let dishSelect = document.getElementById("dishSelect");
-                let selectedDishId = dishSelect.value;
-                if (!selectedDishId) {
-                    alert("Выберите блюдо");
-                    return;
-                }
-                let description = document.getElementById("orderItemDescription").value.trim();
-                if (description === "") description = "-";
-                let newItem = { menuId: selectedDishId, description: description };
-                fetch(`/orders/${currentOrderId}/items/add`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newItem)
-                })
-                    .then(response => {
-                        if (!response.ok) throw new Error('Ошибка при добавлении элемента заказа');
-                        return response.json();
-                    })
-                    .then(addedItem => {
-                        fetchOrderItems(currentOrderId);
-                        document.getElementById("dishTypeSelect").value = "";
-                        document.getElementById("dishSelect").innerHTML = "<option value=''>Выберите блюдо</option>";
-                        document.getElementById("orderItemDescription").value = "-";
-                    })
-                    .catch(error => alert(error.message));
+            // Обработчик для кнопок удаления элементов заказа
+            document.querySelectorAll('.delete-item-btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    const row = this.closest('tr');
+                    const orderItemId = row.querySelector('.order-item-id').textContent.trim();
+                    const currentOrderId = document.getElementById("currentOrderId").textContent.trim();
+
+                    fetch(`/orders/${currentOrderId}/items/delete/${orderItemId}`, { method: 'POST' })
+                        .then(response => {
+                            if (response.ok) {
+                                row.remove();
+                            } else {
+                                alert("Ошибка при удалении элемента заказа");
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Ошибка при удалении элемента заказа:", error);
+                            alert("Ошибка при удалении элемента заказа");
+                        });
+                });
             });
+
+
         });
     </script>
 </head>
@@ -362,12 +410,13 @@
         <li><a href="/" class="home-button">Главная</a></li>
         <li><a href="/about">Об авторе</a></li>
         <li><a href="/menu">Меню</a></li>
-        <li><a href="/reserve">Брони</a></li>
-        <li><a href="/recipes" th:if="${role == 'ROLE_COOK'}">Рецепты</a></li>
-        <li><a href="/stock" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK'}">Склад</a></li>
-        <li><a href="/statistics" th:if="${role == 'ROLE_MANAGER'}">Статистика</a></li>
-        <li><a href="/orders" class="active" th:if="${role == 'ROLE_WAITER'}">Заказы</a></li>
+        <li><a href="/reserve" th:if="${role != 'GUEST'}">Брони</a></li>
+        <li><a href="/recipes" th:if="${role == 'ROLE_COOK' or role == 'ROLE_ADMIN'}">Рецепты</a></li>
+        <li><a href="/stock" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_COOK' or role == 'ROLE_ADMIN'}">Склад</a></li>
+        <li><a href="/statistics" th:if="${role == 'ROLE_MANAGER' or role == 'ROLE_ADMIN'}">Статистика</a></li>
+        <li><a href="/orders"  class="active" th:if="${role == 'ROLE_WAITER' or role == 'ROLE_ADMIN'}">Заказы</a></li>
         <li><a href="/logout" th:if="${role != 'GUEST'}">Выход</a></li>
+        <li><a href="/login" th:if="${role == 'GUEST'}">Вход</a></li>
     </ul>
 </nav>
 
@@ -383,10 +432,6 @@
                     th:text="${table.id + ' (мест: ' + table.seats + ')'}">
             </option>
         </select>
-        <label for="orderDate">Дата заказа:</label>
-        <input type="date" id="orderDate">
-        <label for="orderTime">Время заказа:</label>
-        <input type="time" id="orderTime">
         <label for="orderDescription">Описание заказа:</label>
         <input type="text" id="orderDescription" placeholder="Введите описание заказа">
         <button id="addOrderButton">Add</button>
@@ -466,10 +511,10 @@
         </thead>
         <tbody>
         <tr th:each="order : ${orders}" class="menu-row" th:attr="data-order-id=${order.orderId}">
-            <td class="order-id editable" th:text="${order.orderId}"></td>
+            <td class="order-id" th:text="${order.orderId}"></td>
             <td th:text="${#temporals.format(order.orderDate, 'dd.MM.yyyy') + ' ' + #temporals.format(order.orderTime, 'HH:mm')}"></td>
             <td class="table-number editable" th:text="${order.allTables != null ? order.allTables.id : 'N/A'}"></td>
-            <td class="total-amount editable" th:text="${order.totalAmount}"></td>
+            <td class="total-amount" th:text="${order.totalAmount}"></td>
             <td class="status editable" th:text="${order.status}"></td>
             <td class="description editable" th:text="${order.description}"></td>
             <td class="actions-column">

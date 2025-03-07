@@ -90,7 +90,6 @@ public class StockController {
             Stock stock = stockRepository.findById(updatedStock.getStockId())
                     .orElseThrow(() -> new NoSuchElementException("Stock not found"));
             stock.setAmount(updatedStock.getAmount());
-            stock.setUnit(updatedStock.getUnit());
             stockRepository.save(stock);
         }
         return ResponseEntity.ok().build();
@@ -113,12 +112,10 @@ public class StockController {
         String productType = payload.get("productType");
         String itemName = payload.get("itemName");
         String amountStr = payload.get("amount");
-        String unit = payload.get("unit");
 
         if (productType == null || productType.trim().isEmpty() ||
                 itemName == null || itemName.trim().isEmpty() ||
-                amountStr == null || amountStr.trim().isEmpty() ||
-                unit == null || unit.trim().isEmpty()) {
+                amountStr == null || amountStr.trim().isEmpty() ){
             return ResponseEntity.badRequest().build();
         }
         double amount;
@@ -139,7 +136,7 @@ public class StockController {
         Stock stock = new Stock();
         stock.setItem(item);
         stock.setAmount(amount);
-        stock.setUnit(unit);
+
         Stock savedStock = stockRepository.save(stock);
         return ResponseEntity.ok(savedStock);
     }
