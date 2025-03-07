@@ -5,8 +5,17 @@ import com.restaurant.entities.AllItems;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
+/**
+ * Репозиторий для работы с сущностью {@link Stock}.
+ * Содержит методы для работы с запасами продуктов.
+ */
 public interface StockRepository extends JpaRepository<Stock, Long> {
-    Stock findByItem(AllItems item); // Исправленный метод
 
+    /**
+     * Находит запас по идентификатору товара.
+     *
+     * @param itemId Идентификатор товара.
+     * @return Объект {@link Stock}, представляющий информацию о запасах для указанного товара.
+     */
     Stock findByItemItemId(Long itemId);
 }

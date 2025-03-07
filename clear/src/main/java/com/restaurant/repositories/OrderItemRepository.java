@@ -11,11 +11,30 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Репозиторий для работы с сущностью {@link OrderItem}.
+ * Содержит методы для работы с заказами и блюдами в заказах.
+ */
 @Repository
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
+
+    /**
+     * Находит все позиции в заказе по идентификатору заказа.
+     *
+     * @param orderId Идентификатор заказа.
+     * @return Список позиций заказа.
+     */
     List<OrderItem> findByOrderOrderId(Long orderId);
-    List<OrderItem> findAllByOrder_OrderTimeBetween(LocalDateTime start, LocalDateTime end);
+
+    /**
+     * Находит самые популярные блюда за указанный период времени.
+     * Результат отсортирован по количеству заказов.
+     *
+     * @param startDate Дата начала интервала.
+     * @param endDate Дата окончания интервала.
+     * @param pageable Параметры пагинации.
+     * @return Список блюд с их количеством.
+     */
     @Query("SELECT oi.menu, COUNT(oi) FROM OrderItem oi WHERE oi.order.orderDate BETWEEN :startDate AND :endDate GROUP BY oi.menu ORDER BY COUNT(oi) DESC")
     List<Object[]> findTopDishesByDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, Pageable pageable);
-
 }

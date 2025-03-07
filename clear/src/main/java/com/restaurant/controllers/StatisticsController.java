@@ -33,6 +33,14 @@ public class StatisticsController {
         this.orderItemRepository = orderItemRepository;
     }
 
+    /**
+     * Отображение страницы статистики с популярными блюдами, столами, временем бронирования и средним чеком.
+     * Использует период "day" по умолчанию.
+     *
+     * @param model           модель для передачи данных в представление
+     * @param authentication объект аутентификации для проверки роли пользователя
+     * @return имя представления для отображения статистики
+     */
     @GetMapping
     public String showStatistics(Model model, Authentication authentication) {
         model.addAttribute("timePeriod", "day");  // Default period is 'day'
@@ -50,13 +58,20 @@ public class StatisticsController {
         // Передаем роль в модель
         model.addAttribute("role", role);
 
-        System.out.println(role);
         boolean isAdmin = role.equals("ROLE_MANAGER") || role.equals("ROLE_ADMIN");
         model.addAttribute("isAdmin", isAdmin);
 
         return "statistics";
     }
 
+    /**
+     * Обновление статистики на основе выбранного периода.
+     * Периоды: "day", "week", "month".
+     *
+     * @param period выбранный период для статистики
+     * @param model  модель для передачи данных в представление
+     * @return имя представления для обновленной статистики
+     */
     @PostMapping("/update")
     public String updateStatistics(@RequestParam String period, Model model) {
         model.addAttribute("timePeriod", period);
@@ -68,7 +83,12 @@ public class StatisticsController {
         return "statistics";
     }
 
-    // Helper methods for popular dishes, tables, times, and average check
+    /**
+     * Получение списка популярных блюд для выбранного периода.
+     *
+     * @param period выбранный период для статистики
+     * @return список популярных блюд
+     */
     private List<Menu> getTopDishes(String period) {
         LocalDate startDate = calculateStartDate(period);
         LocalDate endDate = LocalDate.now().minusDays(1);  // Include yesterday
@@ -83,6 +103,12 @@ public class StatisticsController {
         return topDishes;
     }
 
+    /**
+     * Получение списка популярных столов для выбранного периода.
+     *
+     * @param period выбранный период для статистики
+     * @return список популярных столов
+     */
     private List<AllTables> getTopTables(String period) {
         LocalDate startDate = calculateStartDate(period);
         LocalDate endDate = LocalDate.now().minusDays(1);  // Include yesterday
@@ -97,6 +123,12 @@ public class StatisticsController {
         return topTables;
     }
 
+    /**
+     * Получение списка популярных времен бронирования для выбранного периода.
+     *
+     * @param period выбранный период для статистики
+     * @return список популярных времен бронирования
+     */
     private List<String> getTopReservationTimes(String period) {
         LocalDate startDate = calculateStartDate(period);
         LocalDate endDate = LocalDate.now().minusDays(1);  // Include yesterday
@@ -114,13 +146,24 @@ public class StatisticsController {
         return topTimes;
     }
 
-
+    /**
+     * Расчет среднего чека для выбранного периода.
+     *
+     * @param period выбранный период для статистики
+     * @return средний чек
+     */
     private Double getAverageCheck(String period) {
         LocalDate startDate = calculateStartDate(period);
         LocalDate endDate = LocalDate.now().minusDays(1);  // Include yesterday
         return ordersRepository.calculateAverageCheckByDateRange(startDate, endDate);
     }
 
+    /**
+     * Вычисление начала периода в зависимости от выбранного периода (день, неделя, месяц).
+     *
+     * @param period выбранный период для статистики
+     * @return дата начала периода
+     */
     private LocalDate calculateStartDate(String period) {
         LocalDate startDate = LocalDate.now();
         switch (period) {
@@ -138,4 +181,3 @@ public class StatisticsController {
         return startDate;
     }
 }
-

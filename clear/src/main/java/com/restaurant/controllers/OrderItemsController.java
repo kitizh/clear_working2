@@ -7,6 +7,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
+/**
+ * Контроллер для работы с элементами заказов.
+ * Обрабатывает запросы для получения, добавления и удаления элементов заказа.
+ */
 @RestController
 public class OrderItemsController {
 
@@ -16,6 +20,15 @@ public class OrderItemsController {
     private final RecipeRepository recipeRepository;
     private final StockRepository stockRepository;
 
+    /**
+     * Конструктор для инициализации репозиториев, используемых в контроллере.
+     *
+     * @param orderItemRepository Репозиторий для работы с элементами заказа.
+     * @param orderRepository Репозиторий для работы с заказами.
+     * @param menuRepository Репозиторий для работы с меню.
+     * @param recipeRepository Репозиторий для работы с рецептами.
+     * @param stockRepository Репозиторий для работы с запасами ингредиентов.
+     */
     public OrderItemsController(OrderItemRepository orderItemRepository,
                                 OrdersRepository orderRepository,
                                 MenuRepository menuRepository, RecipeRepository recipeRepository, StockRepository stockRepository) {
@@ -26,9 +39,13 @@ public class OrderItemsController {
         this.stockRepository = stockRepository;
     }
 
-    // GET /orders/{orderId}/items
-    // Возвращает список элементов заказа для заданного orderId.
-    // Для каждого элемента возвращаются: orderItemId, dishName, price и description.
+    /**
+     * Возвращает список элементов заказа для заданного orderId.
+     * Для каждого элемента возвращаются: orderItemId, dishName, price и description.
+     *
+     * @param orderId ID заказа, для которого нужно получить элементы.
+     * @return Список элементов заказа с их деталями.
+     */
     @GetMapping("/orders/{orderId}/items")
     @ResponseBody
     public List<Map<String, Object>> getOrderItems(@PathVariable Long orderId) {
@@ -45,17 +62,20 @@ public class OrderItemsController {
         return result;
     }
 
-    // Проверка, есть ли достаточно ингредиентов на складе
+    /**
+     * Проверяет наличие необходимых ингредиентов на складе для выбранного блюда.
+     *
+     * @param menuId ID блюда из меню, для которого нужно проверить наличие ингредиентов.
+     * @return true, если все ингредиенты доступны в необходимом количестве; false в противном случае.
+     */
     public boolean isIngredientAvailable(Long menuId) {
-        // Получаем список рецептов для выбранного блюда
         List<Recipe> recipes = recipeRepository.findByMenuMenuId(menuId);
 
-        // Проходим по каждому рецепту и проверяем наличие ингредиента на складе
         for (Recipe recipe : recipes) {
             AllItems ingredient = recipe.getItem(); // Получаем ингредиент из рецепта
             Double requiredAmount = recipe.getAmount(); // Получаем количество ингредиента, необходимое для блюда
 
-            // Ищем соответствующий ингредиент на складе
+            // Ищем ингредиент на складе
             Stock stock = stockRepository.findByItemItemId(ingredient.getItemId());
 
             if (stock == null || stock.getAmount() < requiredAmount) {
@@ -65,7 +85,14 @@ public class OrderItemsController {
         return true; // Если все ингредиенты есть в нужном количестве
     }
 
-
+    /**
+     * Добавляет новый элемент в заказ.
+     * Проверяет наличие ингредиентов на складе перед добавлением.
+     *
+     * @param orderId ID заказа, в который нужно добавить элемент.
+     * @param payload Содержит данные о меню и описании для нового элемента заказа.
+     * @return Ответ с данными добавленного элемента заказа.
+     */
     @PostMapping("/orders/{orderId}/items/add")
     @ResponseBody
     public Map<String, Object> addOrderItem(@PathVariable Long orderId, @RequestBody Map<String, String> payload) {
@@ -105,10 +132,13 @@ public class OrderItemsController {
         return response;
     }
 
-
-
-    // POST /orders/{orderId}/items/delete/{orderItemId}
-    // Удаляет элемент заказа с указанным orderItemId, если он принадлежит заказу с orderId.
+    /**
+     * Удаляет элемент заказа с указанным orderItemId, если он принадлежит заказу с orderId.
+     *
+     * @param orderId ID заказа, из которого нужно удалить элемент.
+     * @param orderItemId ID элемента заказа, который нужно удалить.
+     * @return Ответ с кодом состояния 200 OK при успешном удалении.
+     */
     @PostMapping("/orders/{orderId}/items/delete/{orderItemId}")
     @ResponseBody
     public ResponseEntity<?> deleteOrderItem(@PathVariable Long orderId, @PathVariable Long orderItemId) {

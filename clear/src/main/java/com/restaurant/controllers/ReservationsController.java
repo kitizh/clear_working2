@@ -49,8 +49,12 @@ public class ReservationsController {
 
     /**
      * Страница с бронями.
-     * - Неавторизованный пользователь увидит только форму для создания брони.
-     * - Админ (ROLE_ADMIN) увидит таблицу со всеми бронями (и возможность редактировать/удалять).
+     * Отображает форму для создания брони для неавторизованных пользователей.
+     * Администратор может видеть таблицу всех броней, редактировать и удалять записи.
+     *
+     * @param model модель для передачи данных в представление
+     * @param authentication объект аутентификации для проверки роли пользователя
+     * @return имя представления для отображения страницы
      */
     @GetMapping
     public String showReservations(Model model, Authentication authentication) throws Exception {
@@ -75,8 +79,6 @@ public class ReservationsController {
         // Передаем роль в модель
         model.addAttribute("role", role);
 
-        System.out.println(role);
-
         boolean isAdmin = role.equals("ROLE_WAITER") || role.equals("ROLE_ADMIN");
         model.addAttribute("isAdmin", isAdmin);
 
@@ -85,12 +87,15 @@ public class ReservationsController {
         // Форматируем дату и время в строку
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         String formattedDateTime = currentDateTime.format(formatter);
-        System.out.println(formattedDateTime);
 
         // Передаем дату и время в модель
         model.addAttribute("currentDT", formattedDateTime);
+
+        // Получаем все бронирования
         List<Reservation> reservations = reservationRepository.findAll();
         model.addAttribute("reservations", reservations);
+
+        // Преобразуем список бронирований в JSON
         String reservationsJson = objectMapper.writeValueAsString(reservations);
         model.addAttribute("reservationsJson", reservationsJson);
 
@@ -98,14 +103,11 @@ public class ReservationsController {
     }
 
     /**
-     * (Для неавторизованных) Создание новой брони (POST /reserve/new).
-     * Принимаем:
-     *  - tableId
-     *  - reservationDate (строка в формате "yyyy-MM-dd")
-     *  - reservationTime (строка в формате "HH:mm:ss")
-     *  - name
-     *  - phone
-     *  - services[] (список Long ID услуг)
+     * Создание новой брони для неавторизованного пользователя.
+     * Принимает информацию о брони, включая стол, дату, время, имя, телефон и услуги.
+     *
+     * @param payload данные о новой брони в формате JSON
+     * @return ResponseEntity с результатом выполнения
      */
     @PostMapping("/new")
     @ResponseBody
@@ -145,22 +147,23 @@ public class ReservationsController {
                 }
             }
 
+            // Ответ с ID новой брони и сообщением об успешном создании
             Map<String, Object> result = new HashMap<>();
             result.put("reservationId", savedRes.getId());
             result.put("message", "Reservation created successfully!");
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {
+            // В случае ошибки возвращаем сообщение об ошибке
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         }
     }
 
-
-
-
-
     /**
-     * Возврат списка услуг (ReservedService) для конкретной брони
+     * Получение списка услуг (ReservedService) для конкретной брони.
+     *
+     * @param resId ID брони
+     * @return ResponseEntity с информацией о услугах для данной брони
      */
     @GetMapping("/{resId}/services")
     @ResponseBody
@@ -181,8 +184,12 @@ public class ReservationsController {
     }
 
     /**
-     * Добавление услуг (ReservedService) к существующей брони (admin)
-     * Принимаем JSON с { "serviceIds": [1, 2, 3] }
+     * Добавление услуг к существующей броне (только для администраторов).
+     * Принимает список идентификаторов услуг для добавления к брони.
+     *
+     * @param resId   ID брони
+     * @param payload данные о добавляемых услугах в формате JSON
+     * @return ResponseEntity с результатом выполнения
      */
     @PostMapping("/{resId}/services/add")
     @ResponseBody
@@ -207,7 +214,11 @@ public class ReservationsController {
     }
 
     /**
-     * Удаление одной записи ReservedService
+     * Удаление услуги из брони.
+     *
+     * @param resId               ID брони
+     * @param reservedServiceId   ID услуги, которую нужно удалить
+     * @return ResponseEntity с результатом удаления
      */
     @PostMapping("/{resId}/services/delete/{reservedServiceId}")
     @ResponseBody
@@ -222,9 +233,11 @@ public class ReservationsController {
     }
 
     /**
-     * Редактирование (inline) списка бронирований.
-     * Принимает массив объектов:
-     * [{ "id": 1, "reservationDate": "yyyy-MM-dd", "reservationTime": "HH:mm:ss", "name": "...", "phoneNumber": "..." }, ...]
+     * Редактирование списка бронирований (inline).
+     * Принимает массив объектов бронирований с новыми данными для каждого.
+     *
+     * @param updatedData список объектов с данными для обновления
+     * @return ResponseEntity с результатом выполнения
      */
     @PostMapping("/update")
     @ResponseBody
@@ -246,7 +259,11 @@ public class ReservationsController {
     }
 
     /**
-     * Удаление брони (admin)
+     * Удаление брони.
+     * Удаляет запись о брони (только для администратора).
+     *
+     * @param resId ID брони
+     * @return ResponseEntity с результатом удаления
      */
     @PostMapping("/delete/{resId}")
     @ResponseBody
@@ -256,10 +273,11 @@ public class ReservationsController {
     }
 
     /**
-     * Получить занятые времена для конкретного столика и даты
-     * @param tableId - ID стола
-     * @param reservationDateStr - строка с датой в формате "yyyy-MM-dd"
-     * @return Список занятых времен на этот день для указанного стола
+     * Получение занятых времен для конкретного стола и даты.
+     *
+     * @param tableId            ID стола
+     * @param reservationDateStr дата в формате "yyyy-MM-dd"
+     * @return список занятых времен на выбранную дату для указанного стола
      */
     @GetMapping("/getReservedTimes")
     @ResponseBody

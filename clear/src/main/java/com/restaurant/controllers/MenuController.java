@@ -13,16 +13,34 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Контроллер для работы с меню ресторана.
+ * Позволяет получать меню, обновлять, удалять и добавлять блюда.
+ */
 @Controller
 @RequestMapping("/menu")
 public class MenuController {
 
     private final MenuRepository menuRepository;
 
+    /**
+     * Конструктор для инициализации репозитория меню.
+     *
+     * @param menuRepository Репозиторий для работы с меню.
+     */
     public MenuController(MenuRepository menuRepository) {
         this.menuRepository = menuRepository;
     }
 
+    /**
+     * Обрабатывает запрос на получение страницы меню.
+     * Отображает список всех блюд, сгруппированных по типу.
+     * Также проверяет роль пользователя и передает её в модель.
+     *
+     * @param model Модель, в которую добавляются данные для отображения.
+     * @param authentication Информация о текущем аутентифицированном пользователе.
+     * @return Имя шаблона для страницы меню.
+     */
     @GetMapping
     public String getMenu(Model model, Authentication authentication) {
         // Получаем все типы блюд (группируем по menuType)
@@ -41,24 +59,28 @@ public class MenuController {
         model.addAttribute("menuTypes", menuTypes);
         model.addAttribute("menuItems", menuItems);
 
-        // Проверяем, является ли пользователь администратором
-
+        // Проверяем роль пользователя и передаем её в модель
         String role = authentication != null ? authentication.getAuthorities()
                 .stream()
                 .map(GrantedAuthority::getAuthority)
                 .findFirst()
                 .orElse("GUEST") : "GUEST";  // Если не аутентифицирован, то роль GUEST
 
-        // Передаем роль в модель
         model.addAttribute("role", role);
 
-        boolean isAdmin = role.equals("ROLE_COOK") || role.equals("ROLE_ADMIN");;
+        boolean isAdmin = role.equals("ROLE_COOK") || role.equals("ROLE_ADMIN");
         model.addAttribute("isAdmin", isAdmin);
 
-        return "menu";
+        return "menu";  // Возвращаем имя шаблона для страницы меню
     }
 
-
+    /**
+     * Обрабатывает запрос на обновление блюда в меню.
+     * Доступно только пользователям с ролью ADMIN.
+     *
+     * @param updatedMenus Список обновленных блюд.
+     * @return Ответ с кодом 200 OK при успешном обновлении.
+     */
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/update")
     @ResponseBody
@@ -69,32 +91,46 @@ public class MenuController {
             menu.setDishName(updatedMenu.getDishName());
             menu.setDescription(updatedMenu.getDescription());
             menu.setPrice(updatedMenu.getPrice());
-            menuRepository.save(menu);
+            menuRepository.save(menu);  // Сохраняем обновленное блюдо
         }
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok().build();  // Возвращаем успешный ответ
     }
 
+    /**
+     * Обрабатывает запрос на удаление блюда из меню по его ID.
+     * Доступно только пользователям с ролью ADMIN.
+     *
+     * @param id ID блюда, которое нужно удалить.
+     * @return Ответ с кодом 200 OK при успешном удалении.
+     */
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/delete/{id}")
     @ResponseBody
     public ResponseEntity<?> deleteMenu(@PathVariable Long id) {
-        menuRepository.deleteById(id);
-        return ResponseEntity.ok().build();
+        menuRepository.deleteById(id);  // Удаляем блюдо по ID
+        return ResponseEntity.ok().build();  // Возвращаем успешный ответ
     }
 
+    /**
+     * Обрабатывает запрос на добавление нового блюда в меню.
+     * Доступно только пользователям с ролью ADMIN.
+     *
+     * @param newMenu Новый объект блюда, который нужно добавить в меню.
+     * @return Ответ с новым добавленным блюдом.
+     */
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/add")
     @ResponseBody
     public ResponseEntity<Menu> addMenuItem(@RequestBody Menu newMenu) {
         // Если описание не указано, задаем дефолтное значение
         if (newMenu.getDescription() == null || newMenu.getDescription().isEmpty()) {
-            newMenu.setDescription("-");
+            newMenu.setDescription("-");  // Устанавливаем дефолтное описание
         }
         // Устанавливаем цену по умолчанию равной 0
         newMenu.setPrice(0.0);
         // Сохраняем новое блюдо в БД
         Menu savedMenu = menuRepository.save(newMenu);
-        return ResponseEntity.ok(savedMenu);
+        return ResponseEntity.ok(savedMenu);  // Возвращаем добавленное блюдо
     }
 
 }

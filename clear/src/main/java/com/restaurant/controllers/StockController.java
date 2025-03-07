@@ -17,10 +17,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.security.core.Authentication;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 @Controller
 @RequestMapping("/stock")
 public class StockController {
@@ -35,6 +31,14 @@ public class StockController {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Отображение страницы с запасами продуктов.
+     * Загружается информация о всех продуктах, типах продуктов и текущем запасе.
+     *
+     * @param model           модель для передачи данных в представление
+     * @param authentication объект аутентификации для проверки роли пользователя
+     * @return имя представления для отображения информации о запасах
+     */
     @GetMapping
     public String getStock(Model model, Authentication authentication) throws Exception {
         // Получаем все продукты из таблицы all_items
@@ -75,13 +79,19 @@ public class StockController {
         // Передаем роль в модель
         model.addAttribute("role", role);
 
-        System.out.println(role);
         boolean isAdmin = role.equals("ROLE_MANAGER") || role.equals("ROLE_ADMIN") || role.equals("ROLE_COOK");
         model.addAttribute("isAdmin", isAdmin);
 
         return "stock";
     }
 
+    /**
+     * Обновление запасов. Доступно только для пользователей с ролью ADMIN.
+     * Принимает список обновленных запасов.
+     *
+     * @param updatedStocks список обновленных запасов
+     * @return статус выполнения операции
+     */
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/update")
     @ResponseBody
@@ -95,6 +105,12 @@ public class StockController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * Удаление запаса по ID. Доступно только для пользователей с ролью ADMIN.
+     *
+     * @param id идентификатор запаса для удаления
+     * @return статус выполнения операции
+     */
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/delete/{id}")
     @ResponseBody
@@ -103,8 +119,13 @@ public class StockController {
         return ResponseEntity.ok().build();
     }
 
-    // Метод добавления нового продукта в запас.
-    // Ожидается JSON с полями: productType, itemName, amount, unit.
+    /**
+     * Добавление нового продукта в запас.
+     * Ожидается JSON с полями: productType, itemName, amount, unit.
+     *
+     * @param payload данные для создания нового запаса
+     * @return созданный запас
+     */
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/add")
     @ResponseBody
@@ -115,15 +136,17 @@ public class StockController {
 
         if (productType == null || productType.trim().isEmpty() ||
                 itemName == null || itemName.trim().isEmpty() ||
-                amountStr == null || amountStr.trim().isEmpty() ){
+                amountStr == null || amountStr.trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
+
         double amount;
         try {
             amount = Double.parseDouble(amountStr);
         } catch (NumberFormatException e) {
             return ResponseEntity.badRequest().build();
         }
+
         // Если продукта с таким именем нет, создаём новый AllItems
         AllItems item = allItemsRepository.findByItemName(itemName);
         if (item == null) {
@@ -132,6 +155,7 @@ public class StockController {
             item.setProductType(productType);
             item = allItemsRepository.save(item);
         }
+
         // Создаём новую запись Stock
         Stock stock = new Stock();
         stock.setItem(item);

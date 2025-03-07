@@ -15,6 +15,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
+/**
+ * Контроллер для работы с заказами.
+ * Обрабатывает запросы для отображения, добавления, обновления и удаления заказов.
+ */
 @Controller
 @RequestMapping("/orders")
 public class OrdersController {
@@ -27,7 +31,18 @@ public class OrdersController {
     private final RecipeRepository recipeRepository;
     private final OrderItemRepository orderItemRepository;
 
-    public OrdersController(OrderItemRepository orderItemRepository, RecipeRepository recipeRepository ,StockRepository stockRepository ,OrdersRepository ordersRepository, AllTablesRepository allTablesRepository, MenuRepository menuRepository, ObjectMapper objectMapper) {
+    /**
+     * Конструктор для инициализации зависимостей контроллера.
+     *
+     * @param orderItemRepository Репозиторий для работы с элементами заказа.
+     * @param recipeRepository Репозиторий для работы с рецептами.
+     * @param stockRepository Репозиторий для работы с запасами.
+     * @param ordersRepository Репозиторий для работы с заказами.
+     * @param allTablesRepository Репозиторий для работы с таблицами.
+     * @param menuRepository Репозиторий для работы с меню.
+     * @param objectMapper Объект для преобразования объектов в JSON.
+     */
+    public OrdersController(OrderItemRepository orderItemRepository, RecipeRepository recipeRepository, StockRepository stockRepository, OrdersRepository ordersRepository, AllTablesRepository allTablesRepository, MenuRepository menuRepository, ObjectMapper objectMapper) {
         this.ordersRepository = ordersRepository;
         this.allTablesRepository = allTablesRepository;
         this.menuRepository = menuRepository;
@@ -37,6 +52,14 @@ public class OrdersController {
         this.orderItemRepository = orderItemRepository;
     }
 
+    /**
+     * Отображает страницу заказов, включая меню и информацию о столах.
+     *
+     * @param model Модель, в которую добавляются данные для отображения на странице.
+     * @param authentication Данные аутентификации пользователя.
+     * @return Имя шаблона для отображения.
+     * @throws Exception При возникновении ошибок при обработке данных.
+     */
     @GetMapping
     public String showOrders(Model model, Authentication authentication) throws Exception {
         List<String> menuTypes = menuRepository.findAll().stream()
@@ -58,13 +81,13 @@ public class OrdersController {
         model.addAttribute("ordersJson", ordersJson);
         model.addAttribute("menuTypes", menuTypes);
 
+        // Получаем роль пользователя и передаем в модель
         String role = authentication != null ? authentication.getAuthorities()
                 .stream()
                 .map(GrantedAuthority::getAuthority)
                 .findFirst()
                 .orElse("GUEST") : "GUEST";  // Если не аутентифицирован, то роль GUEST
 
-        // Передаем роль в модель
         model.addAttribute("role", role);
         boolean isAdmin = role.equals("ROLE_WAITER") || role.equals("ROLE_ADMIN");
         model.addAttribute("isAdmin", isAdmin);
@@ -73,6 +96,12 @@ public class OrdersController {
         return "orders";
     }
 
+    /**
+     * Обновляет заказы на основе полученных данных.
+     *
+     * @param updatedOrders Список карт с данными об обновляемых заказах.
+     * @return Ответ с кодом состояния 200 OK при успешном обновлении.
+     */
     @PostMapping("/update")
     @ResponseBody
     public ResponseEntity<?> updateOrders(@RequestBody List<Map<String, String>> updatedOrders) {
@@ -95,6 +124,12 @@ public class OrdersController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * Добавляет новый заказ в систему.
+     *
+     * @param payload Данные для создания нового заказа, включая ID стола и описание.
+     * @return Ответ с добавленным заказом.
+     */
     @PostMapping("/add")
     @ResponseBody
     public ResponseEntity<Orders> addOrder(@RequestBody Map<String, String> payload) {
@@ -110,6 +145,11 @@ public class OrdersController {
         return ResponseEntity.ok(savedOrder);
     }
 
+    /**
+     * Удаляет заказ по заданному ID.
+     *
+     * @param id ID заказа, который нужно удалить.
+     */
     @PostMapping("/delete/{id}")
     @ResponseBody
     public void deleteOrder(@PathVariable Long id) {
